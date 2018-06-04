@@ -409,6 +409,8 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
     allfig = plt.figure()
     allax = allfig.add_subplot(111)
 
+    probfig, probax = plt.subplots(1, 1)
+
     # iterate through all v/vcrits used for fitting:
     for j, vvcrit in enumerate(vvcrits):
 
@@ -439,6 +441,9 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
                               'dmod': dmod, 
                               'ebv': ebv,
                               'fit': a_cmd.fit}
+
+        # to plot the fit statistic vs. v/vcrit:
+        probax.scatter(vvcrit, a_cmd.fit)
 
         if not justbest:   
 
@@ -488,6 +493,11 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
             bestvvc = vvcrit
             bestcmd = a_cmd
   
+    # save plot of fit statistic vs. v/vc:
+    probax.set_xlabel(r'$\Omega/\Omega_c$')
+    probax.set_ylabel(r'$-2\ln$P')
+    probfig.savefig(os.path.join(plotpath, 'lnpvsrot.png'))
+
     # write best fit solutions +/- uncertainties to a summary file:
     # -------------------------------------------------------------
     print('WRITING RESULTS...')
