@@ -2,7 +2,7 @@ import glob
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from fileio import *
+from match.MISTscripts.fileio import *
 
 def plt_truth(ax, data, photbase, param, vvc=0.3, justval=False):
 
@@ -23,7 +23,7 @@ def plt_truth(ax, data, photbase, param, vvc=0.3, justval=False):
 
     if param == 'lage':
         # get the age bin (** truth in this case is a list of TWO numbers, bounds of 'true' age bin):
-        truth = map(float, lastline.split(' ')[-4:-2]) 
+        truth = np.array(list(map(float, lastline.split(' ')[-4:-2]))) 
         if justval:
             return truth
 
@@ -33,7 +33,8 @@ def plt_truth(ax, data, photbase, param, vvc=0.3, justval=False):
         ax.plot(x, [truth[1]]*len(x), c='k', ls='--')
 
         # fill the region between the bounding lines:
-        ax.fill_between(xlims, truth[0], truth[1], alpha=0.4)
+        ax.fill_between(xlims, truth[0], truth[1], alpha=0.2)
+        ax.set_ylim([truth[0]-0.06, truth[1]+0.06])
 
     elif param == 'logZ':
         
@@ -50,7 +51,8 @@ def plt_truth(ax, data, photbase, param, vvc=0.3, justval=False):
         # and fill the area in between the lines.
         ax.plot(x, [truth[1]]*len(x), c='k', ls='--')
         ax.plot(x, [truth[0]]*len(x), c='k', ls='--')
-        ax.fill_between(xlims, truth[0], truth[1], alpha=0.4)
+        ax.fill_between(xlims, truth[0], truth[1], alpha=0.2)
+        ax.set_ylim([truth[0]-0.06, truth[1]+0.06])
 
     elif param == 'vvcrit':
         

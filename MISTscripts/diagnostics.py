@@ -6,10 +6,18 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import pylab as pyl
-from plotruns import marginalize
-from fileio import *
-from read_fake import *
-from read_phot import *
+
+import seaborn as sns
+# no seaborn gridlines on plot, and white bg:
+sns.set_context('paper')
+sns.set(font='serif')
+sns.set_style("white", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
+plt.axes(frameon=False)
+
+from match.MISTscripts.plotruns import marginalize
+from match.MISTscripts.fileio import *
+from match.MISTscripts.read_fake import *
+from match.MISTscripts.read_phot import *
 
 params = {'axes.labelsize': 20,'axes.titlesize':20, 'text.fontsize': 14, 'legend.fontsize': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
 mpl.rcParams.update(params)
@@ -26,7 +34,8 @@ mpl.rcParams.update(params)
 #SFRS=['0.01','0.001','0.0001', '0.00001', '0.000007', '0.000005', '0.000001']
 def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[None],
              local=True, solution='single', fromfit=False, sub=None, showplt=True, 
-             save_path=None, debug=False, marg=True, ssp=False, incvvc='all', filtertag='TychoBV'):
+             save_path=None, debug=False, marg=True, ssp=False, incvvc='all', filtertag='TychoBV',
+             title=None, axarr=None, xoffset=False, **eb_kwargs):
 
     """
        X binlst may be unecessary; its useage was meant to showcase how different bin sizes may affect things.
@@ -76,10 +85,12 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
     """
     vvcs = vvcs*len(SFRS)
     # Close pre-existing figures:
-    plt.close("all")
-    fig = plt.figure(figsize=(16,9))
-    subplt_n = int('{:d}11'.format(len(params)))
-    axarr = []
+
+#    plt.close("all")
+    if axarr == None:
+        fig = plt.figure(figsize=(16,9))
+        subplt_n = int('{:d}11'.format(len(params)))
+        axarr = []
 
     data_dir = data#'Fakedata'
 
@@ -96,24 +107,30 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
         uerr = dict((ele, 0) for ele in params)
 
         if vvcs[i] == None:
-            photname_base = 'SFR{:s}*_logZ{:s}_dmag0.10_dcol0.05_{:s}'.format(sfr, logZ, filtertag)
+            photname_base = 'SFR{:s}_t8.90_8.92_logZ{:s}_dmag0.10_dcol0.05_{:s}'.format(sfr, logZ, filtertag)
         else:
-            photname_base = 'SFR{:s}*_logZ{:s}_dmag0.10_dcol0.05_vvc{:s}_{:s}'.format(sfr, logZ, vvcs[i], filtertag)
+            if "_rot" not in data:
+                photname_base = 'SFR{:s}_t8.90_8.92_logZ{:s}_dmag0.10_dcol0.05_vvc{:s}_{:s}'.format(sfr, logZ, vvcs[i], filtertag)
+            else:
+                photname_base = 'SFR{:s}_t8.90_8.92_logZ{:s}_dmag0.10_dcol0.05_{:s}'.format(sfr, logZ, filtertag)
 
+        # all jobids for this particular SFR:
         jobids = get_jobids(data_dir, photname_base)
+
+        print(jobids)
 
         for jobid in jobids:
             # get the number of stars (N), age (or other param) best fits, and associated uncertainties:
-            starnum = file_len(get_photof(photname_base, data=data_dir))
-            if marg:
+            #starnum = file_len(get_photof(photname_base, data=data_dir))
+            #if marg:
                 # there are issues with interpolation in match scripts when star numbers get very low (N~200).
-                if starnum <= 200:
-                    interp = False
-                else:
-                    interp = True
+            #    if starnum <= 200:
+            #        interp = False
+            #    else:
+            #        interp = True
                 
                 # this is the v/vcrits, dictionary of best fits, quantile dictionary, and best-fit dict containing lnP values corresponding to ONE jobid (SLURM run) for the given set of population parameters.
-                vvcrits, best_dict, qdict, bfdict = marginalize(data_dir, photname_base, jobid, '12345678.csv', local=local, saveagevsvvc=False, debug=debug, interp=interp, incvvc = incvvc)
+                #vvcrits, best_dict, qdict, bfdict = marginalize(data_dir, photname_base, jobid, '12345678.csv', local=local, saveagevsvvc=False, debug=debug, interp=interp, incvvc = incvvc)
                 #print(qdict)
 
             starnum = file_len(get_photof(photname_base, data=data_dir))
@@ -131,51 +148,70 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
                 if ssp:
                     # by default, readssp() will return an AVERAGE (over all runs) of the bestfit parameter value and uncertainty.
                     # the original, unaveraged values are derived from the sspcombine solutions.
-                    starnums, sspbest, ssperr = readssp(data_dir, sfr, solution, fromfit, param, photname_base=photname_base, sub=sub, incvvc=incvvc)
-                    #print(sspbest)
+                    sspbest, upssperr, lossperr = readssp(photname_base, data=data_dir, SFR=sfr, param=param, sub=sub, vvc=incvvc)#float(vvcs[0]))
+                    #print("Scatter = {:f}, Avg. err = {:f}".format(sspscatter, float(ssperr)))
 
                 # acquire best fits and create an average from all runs at a particular SFR/logZ/input vvcrit.
-                if marg:
+                #if marg:
                     # for the best-fit & uncertainties derived via match scripts.
-                    best[param]+=qdict[param][2]
-                    lerr[param]+=(qdict[param][2] - qdict[param][0])**2
-                    uerr[param]+=(qdict[param][1] - qdict[param][2])**2
-                    if jobid == jobids[-1]:
-                        best[param] /= len(jobids)
-                        lerr[param] = np.sqrt(lerr[param])/len(jobids)
-                        uerr[param] = np.sqrt(uerr[param])/len(jobids)
+                #    best[param]+=qdict[param][2]
+                #    lerr[param]+=(qdict[param][2] - qdict[param][0])**2
+                #    uerr[param]+=(qdict[param][1] - qdict[param][2])**2
+
+                    # average results on last element:
+                #    if jobid == jobids[-1]:
+                #        best[param] /= len(jobids)
+                #        lerr[param] = np.sqrt(lerr[param])/len(jobids)
+                #        uerr[param] = np.sqrt(uerr[param])/len(jobids)
 
                 # create a new axis/subplot for each parameter:
-                try:
+                if axarr ==None:
+                    try:
+                        ax = axarr[j]
+                    except IndexError:
+                        ax = fig.add_subplot(subplt_n)
+                        axarr.append(ax)
+                        subplt_n += 1
+                    if title != None and j == 0:
+                        ax.set_title(title)
+                else:
+                    # if axarr is given, it should have a length = number of parameters (age, logZ, etc.).
                     ax = axarr[j]
-                except IndexError:
-                    ax = fig.add_subplot(subplt_n)
-                    axarr.append(ax)
-                    subplt_n += 1
-
                 
                 # plot average created via Phil's marginalization:
-                if marg and jobid == jobids[-1]:
-                    ax.errorbar(starnum, best[param], yerr=[[lerr[param]],[uerr[param]]], fmt='o', c = 'k')
-                    _ = plt_truth(ax, data_dir, photname_base, param, vvc=vvcs[i])
-                    print('match scripts: best = {:f}'.format(best[param]))
-                    print('match scripts: lerr = {:f}, uerr = {:f}'.format(lerr[param], uerr[param]))
+                #if marg and jobid == jobids[-1]:
+                #    ax.errorbar(starnum, best[param], yerr=[[lerr[param]],[uerr[param]]], fmt='o', c = 'k')
+                    #_ = plt_truth(ax, data_dir, photname_base, param, vvc=vvcs[i])
+                #    print('match scripts: best = {:f}'.format(best[param]))
+                #    print('match scripts: lerr = {:f}, uerr = {:f}'.format(lerr[param], uerr[param]))
                 # plot average according to match sspcombine solutions:
                 if ssp and jobid == jobids[-1]:
                     #print(sspbest)
                     #print(len(np.array([sspbest])))
-                    if sspbest[0] is not None and np.isfinite(sspbest[0]):
-                        ssp_eb = ax.errorbar(starnums, sspbest, yerr=float(ssperr), fmt='o', c = 'r', ecolor='r')
-                        ssp_eb[-1][0].set_linestyle(':')
-                        _ = plt_truth(ax, data_dir, photname_base, param, vvc=vvcs[i])
-                        print('sspcombine: best {:s} = {:f}'.format(param, sspbest[0]))
-                        print('sspcombine: uncerts = +/- {:f}'.format(ssperr[0]))
+                    if sspbest is not None and np.isfinite(sspbest):
+                        #eb_kwargs['fmt'] = 'o'
+                        eb_kwargs['yerr'] = np.array([[lossperr, upssperr]]).T
+
+                        if xoffset:
+                            starnum = starnum + starnum*0.20
+                        
+                        ssp_eb = ax.errorbar(starnum, sspbest, **eb_kwargs)#yerr=float(ssperr), fmt='o', c = 'r', ecolor='r')
+                        #ssp_eb[-1][0].set_linestyle(':')
+                        #_ = plt_truth(ax, data_dir, photname_base, param, vvc=vvcs[i])
+                        print('sspcombine: best {:s} = {:f}'.format(param, sspbest))
+                        print('sspcombine: uncerts: + {:f} - {:f}'.format(upssperr, lossperr))
+                # only plot truths once.
+                if i == 0 and jobid == jobids[-1]:
+                    print(vvcs[i])
+                    _ = plt_truth(ax, data_dir, photname_base, param, vvc=vvcs[i])
 
                 # axis labeling
                 if param=='lage':
-                    ax.set_ylabel(r"$log Age$")
+                    ax.set_ylabel("log age [yr]")
+                    ax.set_ylim([8.80, 9.00])
                 elif param=='logZ':
-                    ax.set_ylabel(r"$[Fe/H]$")
+                    ax.set_ylabel("[Fe/H]")
+                    ax.set_ylim([0.0, 0.30])
                 elif param=='vvcrit':
                     ax.set_ylabel(r"$\frac{\Omega}{\Omega_c}$")
 
@@ -183,7 +219,7 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
                 ax.set_xscale('log')
 
             #print "Plotted {:d} points.".format(len(ages))
-            print "SFR = {:s} ({:d} stars)".format(sfr, starnum)
+            print("SFR = {:s} ({:d} stars)".format(sfr, int(starnum)))
             #print "scatter (std.dev. of best fits): {:f}".format(np.std(ages))
             #print "mean uncert: {:f}".format(np.mean(uncerts))
             #print "scatter / mean uncert: {:f}".format(np.std(ages)/np.mean(uncerts))
@@ -192,7 +228,7 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
             #sfr_bestfitmean = np.log10(sum(linages)/len(ages))
             #mean += sfr_bestfitmean
 
-            print "=====================================================" 
+            print("=====================================================") 
 
     plt.tight_layout()
 
@@ -207,15 +243,17 @@ def plotouts(params, data='Fakedata', SFRS=['0.01','0.001'], logZ='0.05', vvcs=[
     # Check if the save path exists and save an image of the plot there:
     if not os.path.isdir(plot_dir):
         # If the plot save directory does not exist, create it and save there:
-        print "Creating plot save directory {:s}.".format(plot_dir)
+        print("Creating plot save directory {:s}.".format(plot_dir))
         os.mkdir(plot_dir)
 
     if save_path != None:
-        print "Saving plot to {:s}.".format(save_path)
+        print("Saving plot to {:s}.".format(save_path))
         plt.savefig(save_path, dpi=300)
 
     # Display the plot:
     if showplt:
         plt.show()
+    else:
+        return axarr
 
     return

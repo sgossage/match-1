@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import numpy as np
 from .graphics import square_aspect, zeroed_cmap, add_inner_title
+import matplotlib.transforms as mtransforms
 
 import matplotlib as mpl
 
@@ -32,7 +33,7 @@ def mpl_hack(ax):
 
 def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
                xlabel=None, ylabel=None, cmap=None, logcounts=False,
-               photf_pts=None, mist_pts=None, best_list=None):
+               photf_pts=None, mist_pts=None, best_list=None, ymag='I'):
     '''
     Plot four hess diagrams with indivdual color bars using ImageGrid
     hesslist : list
@@ -77,7 +78,7 @@ def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
         ax = hessimg(ax=ax, hess=hess, extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
                      best_list=best_list, cmap=cmap, logcounts=logcounts,
-                     ax_i=i)
+                     ax_i=i, ymag=ymag)
 
     if xlabel is not None:
         ind = 0
@@ -92,7 +93,8 @@ def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
 
 def hessimg(ax, hess, extent, labels=None, photf_pts=None,
             mist_pts=None, best_list=None, cmap=None, ax_i=0,
-            logcounts=False):
+            logcounts=False, xlabel=None, ylabel=None, 
+            mode='single', cbar=True, ymag='I', skewang=0.0):
 
     """
        Draws a hess diagrams to a given axis.
@@ -121,21 +123,92 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
 
     img = ax.imshow(hess, origin='upper', extent=extent,
                     interpolation="nearest", cmap=colors)
+
+    # trying an affine transform to correct skew when ymag is I, not V.
+    if ymag == 'I':
+        # skew angle in degrees; need to actually determine this
+        nmagbin = hess.shape[0]
+        ncolbin = hess.shape[1]
+
+        xpos = np.linspace(start = extent[0], stop = extent[1], num=ncolbin, endpoint=False)
+        for xp in xpos:
+            ax.axvline(x=xp)
+        ypos = np.linspace(start = extent[3], stop = extent[2], num=nmagbin, endpoint=False)
+        for yp in ypos:
+            ax.axhline(y=yp)
+
+        #ax.scatter(max(xpos), max(ypos), s=500, c='r')
+        #ax.scatter(min(xpos), max(ypos), s=500, c='r')
+        #ax.scatter(max(xpos), min(ypos[hess[-1][:] == 0]), s=200, c='g')
+        ax.scatter(extent[1], extent[2], s=500, c='r')
+        ax.scatter(extent[0], extent[2], s=500, c='r')
+        ax.scatter(extent[1], extent[3], s=500, c='g')       
+ 
+        aside = np.abs(max(xpos) - min(xpos))
+        oside = np.abs(min(ypos[hess[:][-1] == 0]) - max(ypos))
+        hside = np.sqrt((min(ypos[hess[:][-1] == 0]) - max(ypos))**2 + (max(xpos) - min(xpos))**2)
+
+        yangle = -skewang#0.0#-np.arccos(aside/hside)*180/np.pi
+        xangle = 0.0
+
+        transform = mtransforms.Affine2D().skew_deg(xangle, yangle)
+        trans_data = transform + ax.transData
+        img.set_transform(trans_data)
+        x1, x2, y1, y2 = img.get_extent()
+
+        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], 
+                "y--", transform=trans_data)       
+
     mpl_hack(ax)
-    ax.cax.colorbar(img)
-    mpl.rc('text',usetex=True)
+    #ax.cax.colorbar(img)
+
+    if mode == 'series' and cbar:
+        ax.cax.colorbar(img)
+    elif mode == 'single':
+        if cbar:
+            plt.colorbar(img, ax=ax)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+
+    #mpl.rc('text',usetex=True)
+#    if labels is not None:
+#        _ = add_inner_title(ax, labels[i], loc=1)
+
+        # SSG: Also adding best age & logz (to model plot):
+#        if i == 1 and mist_pts is not None:
+            #print(best_list)
+#            assert best_list is not None, 'Need best_list for labels'
+#            _ = add_inner_title(ax,
+#                                r"Age = {:.3e}".format(10 ** best_list[0]),
+#                                loc=2)
+#            _ = add_inner_title(ax,
+#                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+
     if labels is not None:
         _ = add_inner_title(ax, labels[i], loc=1)
 
         # SSG: Also adding best age & logz (to model plot):
-        if i == 1 and mist_pts is not None:
+        if (i == 1 | (i > 0 and mode == 'single')) & (best_list is not None):
             #print(best_list)
             assert best_list is not None, 'Need best_list for labels'
-            _ = add_inner_title(ax,
-                                r"Age = {:.3e}".format(10 ** best_list[0]),
-                                loc=2)
-            _ = add_inner_title(ax,
-                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+            _ = add_inner_title(ax,  r"Age = {:.3e}".format(10**best_list[0]), loc=2)
+            _ = add_inner_title(ax,  r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+
+    mpl.rc('text',usetex=True)
+#    if labels is not None:
+#        _ = add_inner_title(ax, labels[i], loc=1)
+
+        # SSG: Also adding best age & logz (to model plot):
+#        if i == 1 and mist_pts is not None:
+            #print(best_list)
+#            assert best_list is not None, 'Need best_list for labels'
+#            _ = add_inner_title(ax,
+#                                r"Age = {:.3e}".format(10 ** best_list[0]),
+#                                loc=2)
+#            _ = add_inner_title(ax,
+#                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
 
     mpl.rc('text', usetex=False)
     ax.set_xlim(extent[0], extent[1])
@@ -149,7 +222,7 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
     if mist_pts is not None:
         # if there are multiple sets of points to plot for the
         # mist model...
-        print(mist_pts)
+        #print(mist_pts)
         try:
             mist_pts[0][0]
             for n, ptset in enumerate(mist_pts):

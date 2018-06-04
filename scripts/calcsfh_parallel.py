@@ -45,7 +45,7 @@ def uniform_filenames(prefs, dry_run=False):
     for pref in prefs:
         dirname, p = os.path.split(pref)
         filters = '_'.join(p.split('_')[1:])
-        print dirname, p, filters
+        print(dirname, p, filters)
         fake, = glob1(dirname, '*{}*fake'.format(filters))
         match, = glob1(dirname, '*{}*match'.format(filters))
         param, = glob1(dirname, '*{}*param'.format(filters))

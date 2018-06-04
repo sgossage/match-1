@@ -1,5 +1,5 @@
 import numpy as np
-from fileio import *
+from match.MISTscripts.fileio import *
 
 def get_mags(photbase, data='Fakedata', vcuts = [999.0, -999.0]):
 

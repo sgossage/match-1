@@ -93,7 +93,7 @@ def add_quantiles(SSP, ax, attrs, uvalss=None, probs=None,
         # plot mean or max post prob
         ax.plot(pts[0], pts[1], 'o', color='white', mec='k', mew=1)
 
-    return ax
+    return ax, q
 
 
 def pdf_plot(SSP, xattr, yattr=None, ax=None, sub=None, save=False,
@@ -164,7 +164,7 @@ def pdf_plot(SSP, xattr, yattr=None, ax=None, sub=None, save=False,
         l = ax.plot(X, prob, **plt_kw)
 
         if quantile:
-            ax = add_quantiles(SSP, ax, xattr, uvalss=[X], probs=[prob],
+            ax, q = add_quantiles(SSP, ax, xattr, uvalss=[X], probs=[prob],
                                gauss=gauss1D, interpolate=interpolateq)
 
         ax.set_xlim(X.min(), X.max())
@@ -204,7 +204,7 @@ def pdf_plot(SSP, xattr, yattr=None, ax=None, sub=None, save=False,
         # ax = square_aspect(ax)
 
         if quantile:
-            add_quantiles(SSP, ax, [xattr, yattr], twod=True, gauss=gauss1D,
+            ax, q = add_quantiles(SSP, ax, [xattr, yattr], twod=True, gauss=gauss1D,
                           interpolate=interpolateq)
 
         ax.set_xlim(X.min(), X.max())
@@ -236,7 +236,7 @@ def pdf_plot(SSP, xattr, yattr=None, ax=None, sub=None, save=False,
         plt.savefig(outname, bbox_inches='tight')
         print('wrote {}'.format(outname))
         plt.close()
-    return ax
+    return ax, q
 
 
 def pdf_plots(SSP, marginals=None, sub=None, twod=False, truth=None,
@@ -265,6 +265,7 @@ def pdf_plots(SSP, marginals=None, sub=None, twod=False, truth=None,
         ndim = len(marginals)
 
     raxs = []
+    qs = []
     if twod:
         fig, axs = corner_setup(ndim)
         for c, mx in enumerate(marginals):
@@ -274,11 +275,18 @@ def pdf_plots(SSP, marginals=None, sub=None, twod=False, truth=None,
                     # diagonal
                     # my = 'fit'  # my is reset for ylabel call
                     my = pstr+'Probability'
-                    raxs.append(SSP.pdf_plot(mx, ax=ax, truth=truth, **plkw))
+                    pdfax, q = SSP.pdf_plot(mx, ax=ax, truth=truth, **plkw)
+                    raxs.append(pdfax)
+                    qs.append(q)
+                    #raxs.append(SSP.pdf_plot(mx, ax=ax, truth=truth, **plkw))
                 else:
                     # off-diagonal
-                    raxs.append(SSP.pdf_plot(mx, yattr=my, ax=ax, truth=truth,
-                                             cmap=cmap, **plkw))
+                    pdfax, q = SSP.pdf_plot(mx, yattr=my, ax=ax, truth=truth,
+                                             cmap=cmap, **plkw)
+                    raxs.append(pdfax)
+                    qs.append(q)
+                    #raxs.append(SSP.pdf_plot(mx, yattr=my, ax=ax, truth=truth,
+                    #                         cmap=cmap, **plkw))
 
                 if c == 0:
                     # left most column
@@ -302,13 +310,14 @@ def pdf_plots(SSP, marginals=None, sub=None, twod=False, truth=None,
                 X = SSP.data[i][np.isfinite(SSP.data[i])]
                 prob = SSP.data[pattr][np.isfinite(SSP.data[pattr])]
             ax = axs[marginals.index(i)]
-            ax = SSP.pdf_plot(i, truth=truth, ax=ax, X=X, prob=prob, **plkw)
+            ax, q = SSP.pdf_plot(i, truth=truth, ax=ax, X=X, prob=prob, **plkw)
             ax.set_xlabel(key2label(i, gyr=SSP.gyr))
             raxs.append(ax)
+            qs.append(q)
 
         if text:
             add_inner_title(raxs[-1], '${}$'.format(text), 3, size=None)
         fig.subplots_adjust(bottom=0.22, left=0.05)
         raxs[0].set_ylabel(key2label('Probability'))
     [ax.locator_params(axis='x', nbins=5) for ax in axs.ravel()]
-    return fig, raxs
+    return fig, raxs, qs[0:3]

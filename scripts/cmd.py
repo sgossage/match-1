@@ -9,7 +9,7 @@ import numpy as np
 
 from match.scripts.config import EXT
 from match.scripts.fileio import read_match_cmd
-from match.scripts.graphics.match_plot import match_plot
+from match.scripts.graphics.match_plot import match_plot, hessimg
 from match.scripts.utils import parse_pipeline
 from match.scripts.wrappers.stats import call_stats
 
@@ -59,11 +59,11 @@ class CMD(object):
     files.
     """
 
-    def __init__(self, filename=None, onlyheader=False, params=None, ymag='V'):
+    def __init__(self, filename=None, onlyheader=False, params=None, ymag='I'):
         if filename is not None:
             self.base, self.name = os.path.split(os.path.abspath(filename))
             (self.cmd, self.fit, self.colors, self.yfilter,
-             self.ncmd, self.nmagbin, self.ncolbin) = \
+             self.ncmd, self.nmagbin, self.ncolbin, self.skewang) = \
                 read_match_cmd(filename, onlyheader=onlyheader, ymag=ymag)
             if not onlyheader:
                 # self.cmd will be an empty array if onlyheader
@@ -100,7 +100,7 @@ class CMD(object):
             ax.set_ylabel(ylabel)
         return xlabel, ylabel
 
-    def load_cmd_fromfake(self, filename, dcol=0.05, dmag=0.1, ymag='V',
+    def load_cmd_fromfake(self, filename, dcol=0.05, dmag=0.1, ymag='I',
                           yfilter=None, colors=None, xlim=None, ylim=None):
         self.data = None
         self.diff = None
@@ -162,7 +162,7 @@ class CMD(object):
 
     def pgcmd(self, labels=None, outdir=None, logcounts=False, figname=None,
               twobytwo=True, sig=True, photf_pts=None, mist_pts=None,
-              best_list=None):
+              best_list=None, ymag='I'):
         '''produce the image that pgcmd.pro makes
         enhances graphics.match_plot.match_plot:
             automatic titles for each panel
@@ -188,7 +188,7 @@ class CMD(object):
         grid = match_plot(hesses, self.extent, labels=labels, ylabel=ylabel,
                           xlabel=xlabel, twobytwo=twobytwo, sig=sig,
                           photf_pts=photf_pts, mist_pts=mist_pts,
-                          best_list=best_list)
+                          best_list=best_list, ymag=ymag)
         gates = self.cmd['gate']
         ugates = np.unique(gates)
         if len(ugates) > 1:
@@ -205,6 +205,76 @@ class CMD(object):
         plt.close()
         print('wrote {}'.format(figname))
         return grid
+
+    def plthess(self, labels=None, outdir=None, logcounts=False, figname=None, cmap=None,
+               sig=True, photf_pts=None, mist_pts=None, best_list=None, hess_i=0):
+        '''produce the image that pgcmd.pro makes
+        enhances graphics.match_plot.match_plot:
+            automatic titles for each panel
+            automatic axes labels
+            add exclude/include gates
+            logcounts only applies to data, model, not diff and sig.
+        '''
+        hess_names = ['data', 'model', 'residual', 'sig']
+
+        labels = labels or self.set_labels()
+
+        if figname is None:
+            base = outdir or self.base
+            assert os.path.isdir(base), \
+                '{} directory not found'.format(base)
+            figname = os.path.join(base, os.path.split(self.name)[1]+ '_{:s}'.format(hess_names[hess_i]) + EXT)
+
+        hess = self.hesses[hess_i]
+        if logcounts & (hess_i == 0 or hess_i == 1):
+            hess = np.log10(hess)
+
+        xlabel, ylabel = self.set_axis_labels()
+
+        fig = plt.figure(figsize=(16,9))
+        ax = fig.add_subplot(111)
+        ax = hessimg(ax = ax, hess = hess, extent=self.extent, labels = labels, photf_pts = photf_pts,
+                           mist_pts = mist_pts, best_list = best_list, cmap = cmap, logcounts = logcounts, 
+                           ax_i = hess_i, mode = 'single', ylabel = ylabel, xlabel = xlabel)
+
+        gates = self.cmd['gate']
+        ugates = np.unique(gates)
+        if len(ugates) > 1:
+            dinds = np.digitize(gates, bins=np.unique(gates), right=True)
+            _ = [ax.plot(self.cmd['color'][dinds == i],
+                                       self.cmd['mag'][dinds == i],
+                                       '.', alpha=0.3)
+                 for i in range(len(dinds)) if i == 0]
+
+        #for ax in grid.axes_all:
+        ax.locator_params(axis='x', nbins=6)
+
+        plt.savefig(figname)
+        plt.close()
+        print('wrote {}'.format(figname))
+        return
+
+    def testplt(self, ax):
+  
+        import matplotlib.transforms as mtransforms
+
+        #imag = self.cmd['mag'] - self.cmd['color']
+        #self.cmd['mag'] = imag
+
+        y1 = max(self.cmd['mag'])
+        y2 = max(self.cmd['mag'][self.cmd['color'] == max(self.cmd['color'])])
+        x1 = min(self.cmd['color'])
+        x2 = max(self.cmd['color'])
+        hyp = np.sqrt((y2-y1)**2 + (x2-x1)**2)
+        adj = abs(x2-x1)
+        skewang= np.arccos(adj/hyp)*180/np.pi
+
+        transform = mtransforms.Affine2D().skew_deg(0.0, skewang)
+        trans_data = transform + ax.transData
+        #ax.scatter(self.cmd['color'], self.cmd['mag'], c=self.cmd['Nsim'], s=10, lw=0, alpha=0.6, cmap='Reds', transform=trans_data)
+        #ax.scatter(self.cmd['color'], self.cmd['mag'], c=self.cmd['Nsim'], s=10, lw=0, alpha=1.0, cmap='Reds')
+        ax.hist2d(self.cmd['color'], self.cmd['mag'], bins=(self.ncolbin, self.nmagbin), weights=self.cmd['Nsim'])
+        return
 
 
 def sortbyfit(cmdfns, onlyheader=False):

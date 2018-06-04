@@ -18,9 +18,12 @@ sns.set(font='serif')
 sns.set_style("white", {'font.family' : 'serif', 'font.serif': ['Times', 'Palatino', 'serif']})
 plt.axes(frameon=False)
 from MIST_codes.scripts import read_mist_models as rmm
-from read_fake import plt_truth
-from fileio import *
+from match.MISTscripts.read_fake import plt_truth
+from match.MISTscripts.fileio import *
+from TIGS import photplot as pp
 
+params = {'axes.labelsize': 30,'axes.titlesize':20, 'font.size': 14, 'legend.fontsize': 14, 'xtick.labelsize': 14, 'ytick.labelsize': 14}
+mpl.rcParams.update(params)
 
 # Add something to perform diagnostic checks...
 # + show that the results are accurate via e.g. plot errors and values as function of star number.
@@ -32,7 +35,7 @@ from fileio import *
 
 
 def marginalize(clustername, photobase, jobidstr, outname, params = ['lage', 'vvcrit', 'logZ'], 
-                local=False, saveagevsvvc=True,debug=False, interp=True, incvvc='all'):
+                local=False, saveagevsvvc=True,debug=False, interp=True, vvc='all'):
 
     """
         This function calls certain methods from Philip Rosenfield/Daniel Weisz's MATCH scripts. Particularly,
@@ -73,8 +76,8 @@ def marginalize(clustername, photobase, jobidstr, outname, params = ['lage', 'vv
     #plotpath = os.path.join(outpath, 'plots')
 
     # list of .scrn files:
-    if incvvc != 'all':
-        flist = glob.glob(os.path.join(scrn_dir, '*vvcrit{:.1f}*.scrn'.format(incvvc)))
+    if vvc != 'all':
+        flist = glob.glob(os.path.join(scrn_dir, '*vvcrit{:.1f}*.scrn'.format(vvc)))
         params = ['lage', 'logZ']
     else:
         flist = glob.glob(os.path.join(scrn_dir, '*.scrn'))
@@ -94,14 +97,14 @@ def marginalize(clustername, photobase, jobidstr, outname, params = ['lage', 'vv
 
     # Corner plots:
     # 'lage', 'vvcrit', 'logZ', 'dmod', 'Av'
-    pdffig, pdfax, quant = combineddata.pdf_plots(params, twod=False, quantile=True, cmap=plt.cm.Reds, interpolateq=interp, debug=debug)
-    plt.close()
-    pdffig, pdfax, quant = combineddata.pdf_plots(params, twod=True, quantile=True, cmap=plt.cm.Reds, interpolateq=interp, debug=debug)
-    plt.savefig(os.path.join(plotpath, 'pdfcornerplot.png'))
-    plt.close()
+    #pdffig, pdfax = combineddata.pdf_plots(params, twod=False, quantile=True, cmap=plt.cm.Reds, interpolateq=interp)
+    #plt.close()
+    #pdffig, pdfax = combineddata.pdf_plots(params, twod=True, quantile=True, cmap=plt.cm.Reds, interpolateq=interp)
+    #plt.savefig(os.path.join(plotpath, 'pdfcornerplot.png'))
+    #plt.close()
 
     # quantile dictionary (the quantiles will be used to draw bounding isochrones for the best-fits at ~+/- 1 sigma parameter values):
-    qdict = {key: value for (key, value) in zip(params, quant)}#{'lage': quant[0], 'vvcrit': quant[1], 'logZ':quant[2]}
+    #qdict = {key: value for (key, value) in zip(params, quant)}#{'lage': quant[0], 'vvcrit': quant[1], 'logZ':quant[2]}
     #print(qdict)
 
     # remove the combined .csv file since it's no longer needed:
@@ -130,100 +133,7 @@ def marginalize(clustername, photobase, jobidstr, outname, params = ['lage', 'vv
                 f.write('Best {:s}: {:.2f}, logP = {:.4f}\n'.format(param, combo_bestdict[param][0], combo_bestdict[param][1]))
 
     #return vbests, vvcrits, qdict, bestdict#, vvcritagefig
-    return vvcrits, bestdict, qdict, combo_bestdict
-
-def agevsvvcrit(flist, jobarr_id, outpath, ext='.png', save=True):
-
-    """
-        Creates best-fit age vs. v/vcrit plot.
-
-        Arguments:
-        ----------
-             + flist (list, str): A list of file paths to various MATCH .scrn files to be used.
-             + jobarr_id (str): String for the SLURM job array ID (maybe you don't use SLURM); used to distringuish
-                                runs that otherwise have the same name & is the numerical sequence assigned to that run's
-                                job array ID. Specific to how I do things & perhaps should be generalized...
-             + outpath (str): Filepath to which the output plots will be saved,
-             + ext (str): String for the saved plot's file extension, e.g. '.png' or '.eps', etc.
-
-        Returns:
-        --------
-            + savename (str): The save name of the saved best age vs. v/vcrit plot.
-            + fig (matplotlib Figure): Figure object of the saved best age vs. v/vcrit plot.
-            + ax (matplotlib Axes): Axes object of      '                                 '.
-            + bestlst (list, list, float): A list of lists of the best-fit values for log10 age, [Fe/H], distance modulus, and Av.
-                                           Elements of each sublist correspond to a particular v/vcrit value.
-            + vvcrits (list, float): A list of the v/vcrit values that each element in the aforementioned sublists corresponds to.
-    """
-
-    outnames = flist#[fpath.split('/')[-1].split('.scrn')[0] + '.csv' for fpath in flist]
-    vvcrits=[]
-    data_arr=[]
-    bestages=[]
-    bestfehs=[]
-    bestdmods=[]
-    bestavs=[]
-    best = {}
-    
-    # For each v/vcrit value, get the best fit age found:
-    for i, name in enumerate(outnames):
-
-        #ssp.combine_files([flist[i]], outfile=name)
-        data_arr.append(ssp.SSP(name))
-        # Get the v/vcrit value:
-        vvcrits.append(float(name.split('vvcrit')[-1].split('_')[0]))
-        # For this v/vcrit value, get the best-fit age, logZ, and dist. modulus:
-        val, lagelnP = getbest('lage', data_arr[i])
-        bestages.append(val)
-        val, fehlnP = getbest('logZ', data_arr[i])
-        bestfehs.append(val)
-        val, dmodlnP = getbest('dmod', data_arr[i])
-        bestdmods.append(val)
-        val, AvlnP = getbest('Av', data_arr[i])
-        bestavs.append(val)
-
-        # writes a .txt file storing the best parameters for a particular v/vcrit run:
-        with open(os.path.join(match_dir, outpath, 'bestparams_vvcrit{:.1f}.txt'.format(vvcrits[i])), 'w+') as f:
-            #for j, param in enumerate(params):
-                #if param == 'lage':
-            f.write('Best age: {:.2e}, logP = {:.4f}\n'.format(10**bestages[i], lagelnP))
-                #else:
-            f.write('Best [Fe/H]: {:.2f}, logP = {:.4f}\n'.format(bestfehs[i], fehlnP))
-            f.write('Best dmod (fixed): {:.2f}, logP = {:.4f}\n'.format(bestdmods[i], dmodlnP))
-            f.write('Best Av (fixed): {:.2f}, logP = {:.4f}\n'.format(bestavs[i], AvlnP))
-
-        # Move the combined file:
-        shutil.move(os.path.join(os.getcwd(), name), os.path.join(plotpath, name))
-
-    # sort v/vcrits in ascending order and their best params too:
-    # log10 ages found:
-    bestages = [lage_val for (vvcrit_val, lage_val) in sorted(zip(vvcrits, bestages))]
-    # logZ values found:
-    bestfehs = [logz_val for (vvcrit_val, logz_val) in sorted(zip(vvcrits, bestfehs))]
-    # dmod (fixed) values found:
-    bestdmods = [dmod_val for (vvcrit_val, dmod_val) in sorted(zip(vvcrits, bestdmods))]
-    # E(B-V)s (fixed) found; note: converting from Av to E(B-V):
-    bestebvs = [av_val/3.1 for (vvcrit_val, av_val) in sorted(zip(vvcrits, bestavs))]
-    # Sort the v/vcrits in ascending order:
-    vvcrits = sorted(vvcrits)
-
-    best_dict = {}
-    for i, vvcrit in enumerate(vvcrits):
-        best_dict[vvcrit] = {'lage': bestages[i], 'feh': bestfehs[i], 'dmod': bestdmods[i], 'ebv': bestebvs[i]}
-    # Make a scatter plot of the best fit ages vs. v/vcrit:
-
-    savename = jobarr_id + '_BestAgevsVVCrit' + ext
-    if save:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(vvcrits, bestages)
-        ax.set_ylabel('Best-fit Age')
-        ax.set_xlabel('v/v_crit')
-        plt.savefig(savename)
-
-    #bestlst = [bestages, bestfehs, bestdmods, bestavs]
-
-    return savename, best_dict, vvcrits#bestlst, vvcrits
+    return vvcrits, bestdict, combo_bestdict
 
 def getbest(param, data):
 
@@ -255,78 +165,112 @@ def getbest(param, data):
     return float(best), float(lnP)
 
 # auxillary function for main(). Not majorly useful on its own.
-def plotisocmd(ax, vvcrit, best_dict, filters, truths, extent):
+def plotisocmd(ax, vvcrit, best_dict, filters,  extent, 
+               txtlbl_kwargs = {"frameon":False,"prop":dict(size=14),"loc":4}, rot=False, texts=['vvc', 'age', 'feh']):
 
+    # blue-red color, red, and blue mag names.
     color_name = '{:s}-{:s}'.format(filters[0], filters[1])
     redmag_name = filters[1]
     bluemag_name = filters[0]
+    txtdict = {}
+    anctxt=''
+    if 'age' in texts:
+        txtdict['age'] = 'age = {:.1f} Myrs'.format(10**best_dict[vvcrit]['lage']['val']/1e6)
+    if 'feh' in texts:
+        txtdict['feh'] = '[Fe/H] = {:.2f}'.format(best_dict[vvcrit]['feh']['val']) 
+        if 'age' in texts:
+            txtdict['age'] = txtdict['age'] + '\n'
 
     # best isochrone (for current v/vcrit):
+    if rot:
+        if 'vvc' in texts:
+            txtdict['vvc'] = r'$P\left(\frac{\Omega}{\Omega_c} = 0.3\right)$'
+            if len(list(txtdict.keys())) > 1:
+                txtdict['vvc'] += '\n'
+        #anctxt = (r'$P\left(\frac{\Omega}{\Omega_c} = 0.3\right)$' + '\n' \
+        #                           'age = {:.1f} Myrs\n' \
+         #                       '[Fe/H] = {:.2f}'.format(10**best_dict[vvcrit]['lage']['val']/1e6, 
+            #                                             best_dict[vvcrit]['feh']['val']))
+    else:
+        if 'vvc' in texts:
+            txtdict['vvc'] = r'$\frac{\Omega}{\Omega_c} = $' + '{:.1f}'.format(vvcrit)
+            if len(list(txtdict.keys())) > 1:
+                txtdict['vvc'] += '\n'
+    for k in ['vvc', 'age', 'feh']:
+        try:
+            anctxt += txtdict[k]
+        except KeyError:
+            pass
+
+    anctxt = (anctxt)
+        #anctxt = (r'$\frac{\Omega}{\Omega_c} = $' + '{:.1f}\n' \
+        #                           'age = {:.1f} Myrs\n' \
+       #                         '[Fe/H] = {:.2f}'.format(vvcrit, 
+        #                                                 10**best_dict[vvcrit]['lage']['val']/1e6, 
+         #                                                best_dict[vvcrit]['feh']['val']))
+
+    # the best fitting isochrone:
     iso = rmm.ISOCMD(best_dict[vvcrit]['feh']['val'], vvcrit, ebv=best_dict[vvcrit]['ebv'], exttag='TP')
-    iso.set_isodata(best_dict[vvcrit]['lage']['val'], color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'])
+    iso.set_isodata(best_dict[vvcrit]['lage']['val'], color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'], texts=anctxt)
 
     # older, redder isochrone (1 sigma away in metallicity and age):
-    isou = rmm.ISOCMD(best_dict[vvcrit]['feh']['val'] + best_dict[vvcrit]['feh']['err'], vvcrit, 
+    isou = rmm.ISOCMD(best_dict[vvcrit]['feh']['val'] + best_dict[vvcrit]['feh']['uperr'], vvcrit, 
                       ebv=best_dict[vvcrit]['ebv'], exttag='TP')
-
-    isou.set_isodata(best_dict[vvcrit]['lage']['val'] + best_dict[vvcrit]['lage']['err'], 
+    isou.set_isodata(best_dict[vvcrit]['lage']['val'] + best_dict[vvcrit]['lage']['uperr'], 
                      color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'])
 
     # younger, bluer isochrone (1 sigma away in [Fe/H], age but in other direction):
-    isol = rmm.ISOCMD(best_dict[vvcrit]['feh']['val'] - best_dict[vvcrit]['feh']['err'], vvcrit, 
+    isol = rmm.ISOCMD(best_dict[vvcrit]['feh']['val'] - best_dict[vvcrit]['feh']['loerr'], vvcrit, 
                                 ebv=best_dict[vvcrit]['ebv'], exttag='TP')
-    isol.set_isodata(best_dict[vvcrit]['lage']['val'] - best_dict[vvcrit]['lage']['err'], 
+    isol.set_isodata(best_dict[vvcrit]['lage']['val'] - best_dict[vvcrit]['lage']['loerr'], 
                      color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'])
 
     # plot best, 1 sig older age/[Fe/H], 1 sig lower age/[Fe/H] isochrones.
-    iso.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, label=True)
-    isou.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, alpha=0.6, ls='--')
-    isol.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, alpha=0.6, ls='--')
+    _ = iso.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, label=txtlbl_kwargs)
+    _ = isou.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, alpha=0.6, ls='--')
+    _ = isol.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, alpha=0.6, ls='--')
+                    
 
-    if truths is not None:
-        # also plot "true" isochrones if told to (assumes 'truth' equals a +/- bound for age, met. 
-        # and a value for vvc):
-        true_isou = rmm.ISOCMD(truths['feh'][1], truths['vvc'], ebv=best_dict[vvcrit]['ebv'], exttag='TP')
-        true_isou.set_isodata(truths['age'][1], color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'])
-        true_isou.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], alpha=0.6, c='k', ls=':')
+    # isol age:
+    isolage = best_dict[vvcrit]['lage']['val'] - best_dict[vvcrit]['lage']['loerr']
+    isoage = best_dict[vvcrit]['lage']['val']
+    isouage = best_dict[vvcrit]['lage']['val'] + best_dict[vvcrit]['lage']['uperr']
+    isodmod = best_dict[vvcrit]['dmod']
 
-        true_isol = rmm.ISOCMD(truths['feh'][0], truths['vvc'], ebv=best_dict[vvcrit]['ebv'], exttag='TP')
-        true_isol.set_isodata(truths['age'][0], color_name, redmag_name, dmod=best_dict[vvcrit]['dmod'])
-        true_isol.isoplot(ax, xlims=extent[0:2], ylims=extent[2:], alpha=0.6, c='k', ls=':')                   
-  
-    #fig.savefig(savename, dpi=300)
-    # maintain collection of isochrone pts. used in plot. Passed to Phil's pgcmd code to overlay
-    # isochrones on Hess diagrams.
-    #mist_pts = [(isol.x, isol.y), (iso.x, iso.y), (isou.x, isou.y)]
-    mist_pts = [(isol.get_data([color_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'] - best_dict[vvcrit]['lage']['err'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0], 
-                 isol.get_data([bluemag_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'] - best_dict[vvcrit]['lage']['err'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0]),
-                (iso.get_data([color_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0], 
-                 iso.get_data([bluemag_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0]),
-                 (isou.get_data([color_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'] + best_dict[vvcrit]['lage']['err'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0], 
-                 isou.get_data([bluemag_name], phasemask=[], 
-                               lage=best_dict[vvcrit]['lage']['val'] + best_dict[vvcrit]['lage']['err'], 
-                               dmod=best_dict[vvcrit]['dmod']).values()[0])
-                 ]
+    # (x, y), i.e., (color, red mag) points of each isochrone in a list:
+    mist_pts = [
+                isoget_colmags(isol, [color_name, redmag_name], lage=isolage, dmod=isodmod),
+                isoget_colmags(iso, [color_name, redmag_name], lage=isoage, dmod=isodmod),
+                isoget_colmags(isou, [color_name, redmag_name], lage=isouage, dmod=isodmod)
+               ]
 
-    return ax, iso, mist_pts
+    xlims = extent[0:2]
+    ylims = extent[2:]
 
-def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, truth, incvvc, savebest=True, bestax=None, justbest=False):
+    return ax, iso, isou, isol, mist_pts, (xlims, ylims)
+
+# colmagnames is a list [color_name, magnitude_name]
+# helper function for isoplotcmd; cumbersome on its own.
+def isoget_colmags(iso, colmagnames, lage, dmod):
+
+    c_dict = iso.get_data([colmagnames[0]], phasemask=[], lage=lage, dmod=dmod)
+    m_dict = iso.get_data([colmagnames[1]], phasemask=[], lage=lage, dmod=dmod)
+
+    # converts to values of color and mag: (col_val, mag_val)
+    cm_pts = (list(c_dict.values())[0], list(m_dict.values())[0])
+
+    return cm_pts
+
+def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc, 
+         outname=None, savebest=True, bestax=None, justbest=False, txtlbl_kwargs = {"frameon":False,"fontsize":14,"loc":4},
+         texts=['vvc', 'age', 'feh'], hess_datapts = True, hess_modeliso = True):
 
     global match_dir
     global scrn_dir
     global outpath
     global plotpath
 
+    # path/to/Cluster
     match_dir = get_workdir(data=cluster_name)
     # path to MATCH .scrn files:
     scrn_dir = os.path.join(get_scrndir(data=cluster_name), photbase, 'SLURM{:s}'.format(jobid))
@@ -336,65 +280,55 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, tru
     plotpath = os.path.join(outpath, 'plots')
     #print(outpath)
 
+    rot = False
+    if 'rot' in cluster_name:
+        rot = True
+
+    if outname != None:
+        # Create corner PDF plot:
+        if vvc != 'all':
+            flist = glob.glob(os.path.join(scrn_dir, '*vvcrit{:.1f}*.scrn'.format(vvc)))
+            params = ['lage', 'logZ']
+        else:
+            flist = glob.glob(os.path.join(scrn_dir, '*.scrn'))
+
+        ssp.combine_files(flist, outfile=outname)
+
+        # Create a match SSP object from the combined scrns of the given runs:
+        combineddata = ssp.SSP(outname)
+
+        # Corner plots:
+        # 'lage', 'vvcrit', 'logZ', 'dmod', 'Av'
+        #pdffig, pdfax = combineddata.pdf_plots(['lage','logZ','vvcrit'], twod=False, quantile=True, cmap=plt.cm.Reds, interpolateq=True)
+        #plt.close()
+        #pdffig, pdfax = combineddata.pdf_plots(['lage','logZ','vvcrit'], twod=True, quantile=True, cmap=plt.cm.Reds, interpolateq=True)
+        #plt.savefig(os.path.join(plotpath, 'pdfcornerplot.png'))
+        #plt.close()
+
     #vbests, vvcrits, qdict, bfdict = marginalize(cluster_name, photbase, sys.argv[3], sys.argv[4], local=local)
     #vvcrits, best_dict, qdict, bfdict = marginalize(cluster_name, photbase, sys.argv[3], sys.argv[4], local=local, incvvc=incvvc)
     # by default, readssp() will return an AVERAGE (over all runs) of the bestfit parameter value and uncertainty.
     # the original, unaveraged values are derived from the sspcombine solutions.
-    if incvvc == 'all':
+    if vvc == 'all':
         vvcrits = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
     else:
-        vvcrits = [incvvc]
+        vvcrits = [vvc]
+    #print(vvcrits)
     best_dict = {}
-    for vvc in vvcrits:
+#    for vvc in vvcrits:
 
         # read sspcombine output for age results (subsampled solution being used):
-        starnums, sspbest_age, ssp_ageerr = readssp(data=cluster_name, solution='subsampled', 
-                                                    fromfit=False, param='age', photname_base=photbase, incvvc=vvc)
+#        sspbest_age, ssp_upageerr, ssp_loageerr = readssp(photname_base=photbase, data=cluster_name, 
+#                                                                param='age', vvc=vvc, jobidstr=jobid)
         # read sspcombines for metallicity results:
-        starnums, sspbest_logz, ssp_logzerr = readssp(data=cluster_name, solution='subsampled', 
-                                                      fromfit=False, param='logZ', photname_base=photbase, incvvc=vvc)
+#        sspbest_logz, ssp_uplogzerr, ssp_lologzerr = readssp(photname_base=photbase, data=cluster_name, 
+#                                                                  param='logZ', vvc=vvc, jobidstr=jobid)
 
         # dictionary whose keys are the corresponding vvc values for the best fit values found above (dmod, Av fixed):
-        best_dict[vvc] = {'lage': {'val': float(sspbest_age[0]), 'err': float(ssp_ageerr[0])}, 
-                          'feh': {'val': float(sspbest_logz[0]), 'err': float(ssp_logzerr[0])}, 
-                          'dmod': dmod, 
-                          'ebv': ebv}
-
-    # if told to plot "truth" values:
-    if truth:
-        if 'Fakedata' in cluster_name:
-            # true age bin (list), logZ +/- spread (list), v/vcrit (float) of artificial data fit to:
-            true_age = plt_truth(None, cluster_name, photbase, 'lage', justval=True)
-            true_feh = plt_truth(None, cluster_name, photbase, 'logZ', justval=True)
-            true_vvc = plt_truth(None, cluster_name, photbase, 'vvcrit', justval=True)
-
-        elif 'Hyades' in cluster_name:
-            # Perryman et al.1998.
-            true_age = [np.log10(575e6), np.log10(675e6)]
-            # [Fe/H] -- e.g. deB01 says 0.14 +/- 0.05
-            true_feh = [0.15, 0.15]
-            # assume canonically non-rotating:
-            true_vvc = 0.0
-      
-        elif 'Praesepe' in cluster_name:
-            # source???.
-            true_age = [np.log10(575e6), np.log10(675e6)]
-            # [Fe/H] source???
-            true_feh = [0.15, 0.15]
-            # assume canonically non-rotating:
-            true_vvc = 0.0
-
-        elif 'Pleiades' in cluster_name:
-            # source???
-            true_age = [np.log10(100e6), np.log10(125e6)]
-            # [Fe/H] e.g. Soderblom+ 2009 says 0.03 +/- 0.02
-            true_feh = [0.00, 0.00]
-            # assume canonically non-rotating:
-            true_vvc = 0.0
-
-        truths = {'age': true_age, 'feh': true_feh, 'vvc': true_vvc}
-    else:
-        truths = None
+#        best_dict[vvc] = {'lage': {'val': sspbest_age, 'uperr': ssp_upageerr, 'loerr': ssp_loageerr}, 
+#                          'feh': {'val': sspbest_logz, 'uperr': ssp_uplogzerr, 'loerr': ssp_lologzerr}, 
+#                          'dmod': dmod, 
+#                          'ebv': ebv}
 
     #plt.clf()
     # clearing out pre-existing output files that this script may have produced in prev. runs:
@@ -435,36 +369,39 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, tru
         ntbins= int(lines[8])
         tbins=lines[9:8+ntbins]
         for i, aline in enumerate(tbins):
-            tbins[i] = map(float, aline.split('\n')[0].split(' ')[-2:])
+            tbins[i] = np.array(list(map(float, aline.split('\n')[0].split(' ')[-2:])))
 
     # Manage exclude gates (right now only works for one region):
     # If there are exclude gates...
     if int(exclusions[0]) > 0:
         # Get the exclude gate points:
-        expts = map(float, exclusions.split(' ')[1:-1])
+        expts = np.array(list(map(float, exclusions.split(' ')[1:-1])))
         ex_x = expts[::2]
         ex_y = expts[1::2]
         ex_xy = zip(ex_x, ex_y)
 
     else:
         expts = None
-        
+        ex_xy = None
 
     # Also get the residuals (???):
     # For overplotting data points, get the data points CMD x, y values from the photometry file:
-    photf_v = np.genfromtxt(os.path.join(match_dir, 'photometry', '{:s}.phot'.format(photbase)), usecols=(0,))
-    photf_i = np.genfromtxt(os.path.join(match_dir, 'photometry', '{:s}.phot'.format(photbase)), usecols=(1,))
+    photf_path = os.path.join(match_dir, 'photometry', '{:s}.phot'.format(photbase))
+    photf_v_raw = np.genfromtxt(photf_path, usecols=(0,))
+    photf_i_raw = np.genfromtxt(photf_path, usecols=(1,))
+    if any(photf_v_raw >= 99.999) or any(photf_i_raw >= 99.999):
+        print("Bad photometric values detected in {:s}. Cutting them out...".format(photf_path))
+        photf_v = photf_v_raw[(photf_v_raw < 99.999) & (photf_i_raw < 99.999)]
+        photf_i = photf_i_raw[(photf_v_raw < 99.999) & (photf_i_raw < 99.999)]
+    else:
+        photf_v = photf_v_raw
+        photf_i = photf_i_raw
+
     photf_vmi = photf_v - photf_i
     # Tuple storing the x, y values for plotting the data on a CMD (using color on x, red filter on y):
     photf_pts = (photf_vmi, photf_i)
     # match uses blue filter on y axis.
     photf_pts_alt = (photf_vmi, photf_v)
-
-    # store number of data pts if told to:
-    if star_num:
-        nstars = len(photf_vmi)
-
-    #plt.clf()
 
     bestfit = 99999.9
     # Plot best isochrone for each v/vcrit individually:
@@ -475,13 +412,33 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, tru
     # iterate through all v/vcrits used for fitting:
     for j, vvcrit in enumerate(vvcrits):
 
-        #print(outpath)
+        print(outpath)
         # get the .cmd file for making a MATCH pg style plot:
-        fname = glob.glob(os.path.join(outpath,'*vvcrit{:.1f}*.cmd'.format(vvcrit)))[0]
+        if 'flat' in cluster_name:
+            fname = glob.glob(os.path.join(outpath,'*vvcflat*.cmd'))[0]
+        else:
+            try:
+                fname = glob.glob(os.path.join(outpath,'*vvc{:.1f}*.cmd'.format(vvcrit)))[0]
+            except IndexError:
+                fname = glob.glob(os.path.join(outpath,'*vvcrit{:.1f}*.cmd'.format(vvcrit)))[0]
         # use Phil's code to make a CMD object from the .cmd file:
-        a_cmd = cmd.CMD(fname)
+        a_cmd = cmd.CMD(fname, ymag='I')
         # store the axis extents of the CMD data
         extent = a_cmd.extent
+
+        # read sspcombine output for age results (subsampled solution being used):
+        sspbest_age, ssp_upageerr, ssp_loageerr = readssp(photname_base=photbase, data=cluster_name, 
+                                                                param='age', vvc=vvcrit, jobidstr=jobid)
+        # read sspcombines for metallicity results:
+        sspbest_logz, ssp_uplogzerr, ssp_lologzerr = readssp(photname_base=photbase, data=cluster_name, 
+                                                                  param='logZ', vvc=vvcrit, jobidstr=jobid)
+
+        # dictionary whose keys are the corresponding vvc values for the best fit values found above (dmod, Av fixed):
+        best_dict[vvcrit] = {'lage': {'val': sspbest_age, 'uperr': ssp_upageerr, 'loerr': ssp_loageerr}, 
+                              'feh': {'val': sspbest_logz, 'uperr': ssp_uplogzerr, 'loerr': ssp_lologzerr}, 
+                              'dmod': dmod, 
+                              'ebv': ebv,
+                              'fit': a_cmd.fit}
 
         if not justbest:   
 
@@ -489,61 +446,51 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, tru
             ax = fig.add_subplot(111)
 
             # scatter plot of stars from data file (observations):
-            # w/ num of data points in the plot legend...
-            if star_num:
-                ax.scatter(*photf_pts, lw=0, s=8, c='r', label=r"$N_*$ = "+"{:d}".format(nstars))
-                ax.legend(loc = 'best')
-            # just the scatter plot...
-            else: 
-                ax.scatter(*photf_pts, lw=0, s=8, c='r')
+            ax = pp.plotphot(*photf_pts, ax=ax) 
             # X out masked data points.
             if expts != None:
                 for k in range(len(photf_pts[0])):
                     if (min(ex_x) < photf_vmi[k] < max(ex_x)) & (min(ex_y) < photf_v[k] < max(ex_y)):
-                        ax.scatter(photf_vmi[k], photf_i[k], s=12, c='k', marker='x')  
+                        ax.scatter(photf_vmi[k], photf_i[k], s=40, c='k', marker='x')  
 
             # Plot MIST isochrones corresponding to MATCH best-fit parameters.
-            ax, iso, mist_pts = plotisocmd(ax=ax, vvcrit=vvcrit, best_dict=best_dict, filters=filters, truths=truths, extent=extent)
+            ax, iso, isou, isol, mist_pts, axlims = plotisocmd(ax=ax, vvcrit=vvcrit, best_dict=best_dict, filters=filters, 
+                                                               extent=extent, txtlbl_kwargs = txtlbl_kwargs, rot=rot, texts=texts)
 
+            ax.set_title('{:s}'.format(cluster_name.split('rot')[0]))
             # saving the plot of data points w/ isochrones overlaid:
-            savename = os.path.join(plotpath, 'cmd_vvcrit{:.1f}_m2lnP{:.2f}.png'.format(vvcrit, a_cmd.fit))
+            savename = os.path.join(plotpath, 'cmd_vvc{:.1f}_m2lnP{:.2f}.png'.format(vvcrit, a_cmd.fit))
             fig.savefig(savename, dpi=300)
 
             # create a MATCH pg style plot using the .cmd file:
             # using photf_pts_alt because MATCH does its CMDs with V-I vs. V & not sure if this is changeable.
-            a_cmd.pgcmd(photf_pts=photf_pts_alt, mist_pts=mist_pts, 
-                        best_list=[best_dict[vvcrit]['lage']['val'], best_dict[vvcrit]['feh']['val']])
+            pgcmd_kwargs = {}
+            if hess_datapts:
+                pgcmd_kwargs['photf_pts'] = photf_pts
+            if hess_modeliso:
+                pgcmd_kwargs['mist_pts'] = mist_pts
+            pgcmd_kwargs['best_list'] = [best_dict[vvcrit]['lage']['val'], best_dict[vvcrit]['feh']['val']]
+
+            # four panel plot of all hess diagrams:
+            a_cmd.pgcmd(**pgcmd_kwargs)
+            for m in range(4):
+                # each of the 4 plotted separately:
+                pgcmd_kwargs['hess_i'] = m
+                a_cmd.plthess(**pgcmd_kwargs)
         
             # closing figure before moving on to next plots.
             fig.clf()
-
-            #==================================================================
-            # For plotting all best fits together (on another matplotlib axis):
-            #==================================================================
-            # Only scatter plot data points once (on axis 2/ all isochrones).
-            if j == 0:
-                allax.scatter(*photf_pts, lw=0, s=8, c='r')
-                # Mark excluded region(s)
-                if expts != None:
-                    for k in range(len(photf_pts[0])):
-                        if (min(ex_x) < photf_vmi[k] < max(ex_x)) & (min(ex_y) < photf_v[k] < max(ex_y)):
-                            allax.scatter(photf_vmi[k], photf_i[k], s=12, c='k', marker='x') 
-
-            # all best isochrones are plotted together (no +/- 1 sigma isochrones are plotted):
-            iso.isoplot(allax, xlims=extent[0:2], ylims=extent[2:], shade = vvcrit, legloc='upper right')
 
         # track which cmd has the overall highest lnP & corresponding v/vcrit.
         if a_cmd.fit < bestfit:
 
             bestfit = a_cmd.fit
             bestvvc = vvcrit
-
-
-
-
-        
+            bestcmd = a_cmd
+  
     # write best fit solutions +/- uncertainties to a summary file:
     # -------------------------------------------------------------
+    print('WRITING RESULTS...')
     outlines = ['Hyades\n','_______\n', 
                 'Tycho B, V\n','--------\n', '\n', '\n', '\n',
                 '2MASS J, Ks\n','-------\n', '\n', '\n', 
@@ -554,86 +501,111 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, star_num, tru
                 'Tycho B, V\n','--------\n', '\n', '\n', '\n', 
                 '2MASS J, Ks\n','-------\n', '\n', '\n', '\n']
 
-    with open('/n/home12/sgossage/match_results.txt', 'rw+') as sumfile:
+    # writing results to a .txt file for reference (don't add fake data results though):
+    if 'Fakedata' not in cluster_name:
+        with open('/n/home12/sgossage/match_results.txt', 'r+') as sumfile:
 
-        # get current lines of the summary file:
-        inlines  = sumfile.readlines()
-        #print(inlines)
-        #print(len(inlines))
-        #print(len(outlines))
+            # get current lines of the summary file:
+            inlines  = sumfile.readlines()
+#            print(inlines)
+            #print(len(inlines))
+            #print(len(outlines))
 
-        for i, line in enumerate(inlines):
-            # maintain lines that already contain best fits
-            if 'Best' in line:
-                print(line)
-                outlines[i] = line
+            for i, line in enumerate(inlines):
+                # maintain lines that already contain best fits
+                if ('Best' in line) | ('v/vcrit = 0.0' in line):
+                    print(line)
+                    outlines[i] = line
 
-        # update best fit line for the current run:
-        if 'Hyades' in cluster_name:
-            n = 4
-        elif 'Praesepe' in cluster_name:
-            n = 16
-        elif 'Pleiades' in cluster_name:
-            n = 28
+            # update best fit line for the current run:
+            if 'Hyades' in cluster_name:
+                n = 4
+            elif 'Praesepe' in cluster_name:
+                n = 16
+            elif 'Pleiades' in cluster_name:
+                n = 28
 
-        if '2MASSJK' in photbase:
-            n += 5
+            if '2MASSJK' in photbase:
+                n += 5
 
-        # print these lines when updating...
-        # ...if using a distribution of roation rates...
-        if '_rot' in cluster_name:
-            n += 1
-            outlines[n] = 'Best (rotation distribution) v/vcrit = {:.1f}, ' \
-                          'age = {:.1f} +/- {:.1f} Myrs,' \
-                          '[Fe/H] = {:.2f} +/- {:.2f}\n'.format(bestvvc, 
-                                                                10**best_dict[bestvvc]['lage']['val']/1e6, 
-                                                                (10**(best_dict[bestvvc]['lage']['val'] + \
-                                                                best_dict[bestvvc]['lage']['err']) - \
-                                                                10**best_dict[bestvvc]['lage']['val'])/1e6, 
-                                                                best_dict[bestvvc]['feh']['val'],  
-                                                                best_dict[bestvvc]['feh']['err'])
+            # print these lines when updating...
+            # ...if using a distribution of roation rates...
+            if ('_rot' in cluster_name) | ('_flat' in cluster_name):
+                n += 2
+                outlines[n] = 'Best (rotation distribution) v/vcrit = {:.1f}, ' \
+                              'age = {:.1f} + {:.1f} - {:.1f} Myrs,' \
+                              '[Fe/H] = {:.2f} + {:.2f} - {:.2f}, -2lnP ={:.2f} \n'.format(bestvvc, 
+                                                                                (10**best_dict[bestvvc]['lage']['val'])/1e6,
+                                                                                (10**(best_dict[bestvvc]['lage']['val'] + \
+                                                                                best_dict[bestvvc]['lage']['uperr']) - \
+                                                                                10**best_dict[bestvvc]['lage']['val'])/1e6,
+                                                                                (10**best_dict[bestvvc]['lage']['val'] - \
+                                                                                10**(best_dict[bestvvc]['lage']['val'] - \
+                                                                                best_dict[bestvvc]['lage']['loerr']))/1e6,
+                                                                                best_dict[bestvvc]['feh']['val'],  
+                                                                                best_dict[bestvvc]['feh']['uperr'],
+                                                                                best_dict[bestvvc]['feh']['loerr'],
+                                                                                best_dict[bestvvc]['fit'])
 
-        # ...or else if not using a distribution of rotation rates.
-        else:
-            outlines[n] = 'Best v/vcrit = {:.1f}, ' \
-                          'age = {:.1f} +/- {:.1f} Myrs,' \
-                          '[Fe/H] = {:.2f} +/- {:.2f}\n'.format(bestvvc, 
-                                                                (10**best_dict[bestvvc]['lage']['val'])/1e6, 
-                                                                (10**(best_dict[bestvvc]['lage']['val'] + \
-                                                                best_dict[bestvvc]['lage']['err']) - \
-                                                                10**best_dict[bestvvc]['lage']['val'])/1e6, 
-                                                                best_dict[bestvvc]['feh']['val'], 
-                                                                best_dict[bestvvc]['feh']['err'])
+            # ...or else if not using a distribution of rotation rates.
+            else:
+                outlines[n] = 'Best v/vcrit = {:.1f}, ' \
+                              'age = {:.1f} + {:.1f} - {:.1f} Myrs,' \
+                              '[Fe/H] = {:.2f} + {:.2f} - {:.2f}, -2lnP = {:.2f}\n'.format(bestvvc, 
+                                                                            (10**best_dict[bestvvc]['lage']['val'])/1e6, 
+                                                                            (10**(best_dict[bestvvc]['lage']['val'] + \
+                                                                            best_dict[bestvvc]['lage']['uperr']) - \
+                                                                            10**best_dict[bestvvc]['lage']['val'])/1e6,
+                                                                            (10**best_dict[bestvvc]['lage']['val'] - \
+                                                                            10**(best_dict[bestvvc]['lage']['val'] - \
+                                                                            best_dict[bestvvc]['lage']['loerr']))/1e6,
+                                                                            best_dict[bestvvc]['feh']['val'], 
+                                                                            best_dict[bestvvc]['feh']['uperr'],
+                                                                            best_dict[bestvvc]['feh']['loerr'],
+                                                                            best_dict[bestvvc]['fit'])
+                n += 1
+                outlines[n] = 'v/vcrit = {:.1f}, ' \
+                              'age = {:.1f} + {:.1f} - {:.1f} Myrs,' \
+                              '[Fe/H] = {:.2f} + {:.2f} - {:.2f}, -2lnP = {:.2f}\n'.format(0.0, 
+                                                                                (10**best_dict[0.0]['lage']['val'])/1e6, 
+                                                                                (10**(best_dict[0.0]['lage']['val'] + \
+                                                                                best_dict[0.0]['lage']['uperr']) - \
+                                                                                10**best_dict[0.0]['lage']['val'])/1e6,
+                                                                                (10**best_dict[0.0]['lage']['val'] - \
+                                                                                10**(best_dict[0.0]['lage']['val'] - \
+                                                                                best_dict[0.0]['lage']['loerr']))/1e6,
+                                                                                best_dict[0.0]['feh']['val'], 
+                                                                                best_dict[0.0]['feh']['uperr'],
+                                                                                best_dict[0.0]['feh']['loerr'],
+                                                                                best_dict[0.0]['fit'])
 
-        # return to top of file & then write lines out.
-        sumfile.seek(0)
-        sumfile.writelines(outlines)
-
-    # After all, save image of the plot containing all isochrones plotted side by side.
-    savename = os.path.join(plotpath, 'cmdall_bestvvcrit{:.1f}.png'.format(bestvvc))
-    allfig.savefig(savename, dpi=300)
-    allfig.clf()
+            # return to top of file & then write lines out.
+            sumfile.seek(0)
+            sumfile.writelines(outlines)
     #=========================================================
 
 
     if bestax == None:
         bestfig = plt.figure()
         bestax = bestfig.add_subplot(111)
+        bestax.set_title('{:s}'.format(cluster_name.split('rot')[0]))
 
-    bestax.scatter(*photf_pts, lw=0, s=8, c='r')
-    if expts != None:
-        for k in range(len(photf_pts[0])):
-            if (min(ex_x) < photf_vmi[k] < max(ex_x)) & (min(ex_y) < photf_v[k] < max(ex_y)):
-                bestax.scatter(photf_vmi[k], photf_i[k], s=12, c='k', marker='x') 
+    #bestax.scatter(*photf_pts, lw=0, s=8, c='r')
+    bestax = pp.plotphot(*photf_pts, ax=bestax) 
+#    if expts != None:
+##        for k in range(len(photf_pts[0])):
+#            if (min(ex_x) < photf_vmi[k] < max(ex_x)) & (min(ex_y) < photf_v[k] < max(ex_y)):
+#                bestax.scatter(photf_vmi[k], photf_i[k], s=40, c='k', marker='x') 
 
-    bestax, bestiso, mist_pts = plotisocmd(ax=bestax, vvcrit=bestvvc, best_dict=best_dict, filters=filters, truths=truths, extent=extent)
+    bestax, bestiso, bestisou, bestisol, mist_pts, axlims = plotisocmd(ax=bestax, vvcrit=bestvvc, best_dict=best_dict, 
+                                                                       filters=filters, extent=extent, txtlbl_kwargs = txtlbl_kwargs, rot=rot, texts=texts)
 
     if savebest:
         # save the figure.
         bestfig.savefig(os.path.join(plotpath, 'bestcmd_vvcrit{:.1f}_m2lnP{:.2f}.png'.format(vvcrit, a_cmd.fit)), dpi=300)
         bestfig.clf()
 
-    return bestax, allax
+    return bestax, allax, (bestiso, bestisou, bestisol), bestcmd, photf_pts, mist_pts, ex_xy, axlims
 
 if __name__ == "__main__":
 
@@ -657,6 +629,7 @@ if __name__ == "__main__":
     cluster_name = sys.argv[1]
     photbase = os.path.splitext(sys.argv[2])[0]
     jobid = sys.argv[3]
+    outname=sys.argv[4]
 
     # blue and red filters:
     v_filter = sys.argv[5]
@@ -673,10 +646,6 @@ if __name__ == "__main__":
         local = True
     else:
         local = False
-    if '-nstar' in sys.argv[9:]:
-        star_num = True
-    else:
-        star_num = False
     if '-truth' in sys.argv[9:]:
         truth = True
     else:
@@ -685,10 +654,10 @@ if __name__ == "__main__":
     for arg in sys.argv[9:]:
         print('.')
         if '-vvcin=' in arg:
-            incvvc = float(arg.split('-vvcin=')[-1])
+            vvc = float(arg.split('-vvcin=')[-1])
             break
         else:
-            incvvc = 'all'
+            vvc = 'all'
 
-    ax, allax = main(cluster_name=cluster_name, photbase = photbase, jobid = jobid, filters = filters, dmod = dmod, ebv = ebv,
-                     local=local, star_num=star_num, truth = truth, incvvc = incvvc)
+    _ = main(cluster_name=cluster_name, photbase = photbase, jobid = jobid, filters = filters, dmod = dmod, ebv = ebv,
+                     local=local, vvc = vvc, outname=outname)

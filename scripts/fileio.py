@@ -9,6 +9,8 @@ import logging
 import numpy as np
 from astropy.table import Table
 
+import matplotlib.pyplot as plt
+
 from .config import SCRNEXT
 
 yeahpd = True
@@ -207,7 +209,7 @@ def read_fake(filename):
     return data
 
 
-def read_match_cmd(filename, onlyheader=False, ymag='V'):
+def read_match_cmd(filename, onlyheader=False, ymag='I'):
     '''read MATCH .cmd file'''
     if not filename.endswith('.cmd'):
         print('Warning: {} might not be a .cmd file'.format(filename))
@@ -216,9 +218,51 @@ def read_match_cmd(filename, onlyheader=False, ymag='V'):
     if not onlyheader:
         cmd = np.genfromtxt(filename, skip_header=4, names=names,
                             invalid_raise=False)
+
+        f, axa = plt.subplots(1, 2, figsize=(16,9))
+        axa[0].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis')
+        axa[1].scatter(max(cmd['color']), max(cmd['mag']), c='r', s=400, alpha=0.6)
+
+        print(np.where(cmd['mag']==max(cmd['mag'])))
+        print(np.where(cmd['color']==max(cmd['color'])))
+        print(np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag']))))
+        idx = np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag'])))[0][0]
+        print(cmd['Nobs'][idx])
+
         if ymag != 'V':
+            import matplotlib.transforms as mtransforms
             imag = cmd['mag'] - cmd['color']
             cmd['mag'] = imag
+
+            #axa[1].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis')
+            axa[1].scatter(min(cmd['color']), max(cmd['mag']), c='r', s=400, alpha=0.6)
+
+            axa[1].scatter(max(cmd['color']), max(cmd['mag'][cmd['color'] == max(cmd['color'])]), c='r', s=400, alpha=0.6)
+
+            y1 = max(cmd['mag'])
+            y2 = max(cmd['mag'][cmd['color'] == max(cmd['color'])])
+            x1 = min(cmd['color'])
+            x2 = max(cmd['color'])
+            hyp = np.sqrt((y2-y1)**2 + (x2-x1)**2)
+            adj = abs(x2-x1)
+            skewang= np.arccos(adj/hyp)*180/np.pi
+
+            transform = mtransforms.Affine2D().skew_deg(0.0, skewang)
+            trans_data = transform + axa[1].transData
+            axa[1].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis', transform=trans_data)
+
+            #print(np.where(cmd['mag']==max(cmd['mag'])))
+            #print(np.where(cmd['color']==max(cmd['color'])))
+            #print(np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag']))))
+            #idx = np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag'])))[0][0]
+            #print(cmd['Nobs'][idx])
+
+            for ax in axa:
+                ax.invert_yaxis()
+                ax.set_aspect(np.abs((np.diff(ax.get_xlim()) / (np.diff(ax.get_ylim())))))
+            f.savefig('testhess.png', dpi=300)
+            #sys.exit()
+            #print(cmd['mag'].shape)
 
     with open(filename, 'r') as inp:
         header = [next(inp).strip() for _ in range(4)]
@@ -229,7 +273,8 @@ def read_match_cmd(filename, onlyheader=False, ymag='V'):
         yfilter = header[2].split('-')[1]
     else:
         yfilter = header[-1]
-    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin
+        skewang = 0.0
+    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin, skewang
 
 
 def add_gates(ngates):
