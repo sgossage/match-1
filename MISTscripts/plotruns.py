@@ -239,9 +239,9 @@ def plotisocmd(ax, vvcrit, best_dict, filters,  extent,
 
     # (x, y), i.e., (color, red mag) points of each isochrone in a list:
     mist_pts = [
-                isoget_colmags(isol, [color_name, redmag_name], lage=isolage, dmod=isodmod),
-                isoget_colmags(iso, [color_name, redmag_name], lage=isoage, dmod=isodmod),
-                isoget_colmags(isou, [color_name, redmag_name], lage=isouage, dmod=isodmod)
+                isoget_colmags(isol, [color_name, bluemag_name], lage=isolage, dmod=isodmod),
+                isoget_colmags(iso, [color_name, bluemag_name], lage=isoage, dmod=isodmod),
+                isoget_colmags(isou, [color_name, bluemag_name], lage=isouage, dmod=isodmod)
                ]
 
     xlims = extent[0:2]
@@ -445,7 +445,7 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
         # to plot the fit statistic vs. v/vcrit:
         probax.scatter(vvcrit, a_cmd.fit)
 
-        if not justbest:   
+        if True:#not justbest:   
 
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -453,7 +453,7 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
             # scatter plot of stars from data file (observations):
             ax = pp.plotphot(*photf_pts, ax=ax) 
             # X out masked data points.
-            if expts != None:
+            if expts is not None:
                 for k in range(len(photf_pts[0])):
                     if (min(ex_x) < photf_vmi[k] < max(ex_x)) & (min(ex_y) < photf_v[k] < max(ex_y)):
                         ax.scatter(photf_vmi[k], photf_i[k], s=40, c='k', marker='x')  
@@ -471,13 +471,14 @@ def main(cluster_name, photbase, jobid, filters, dmod, ebv, local, vvc,
             # using photf_pts_alt because MATCH does its CMDs with V-I vs. V & not sure if this is changeable.
             pgcmd_kwargs = {}
             if hess_datapts:
-                pgcmd_kwargs['photf_pts'] = photf_pts
+                pgcmd_kwargs['photf_pts'] = photf_pts_alt
             if hess_modeliso:
                 pgcmd_kwargs['mist_pts'] = mist_pts
             pgcmd_kwargs['best_list'] = [best_dict[vvcrit]['lage']['val'], best_dict[vvcrit]['feh']['val']]
+            pgcmd_kwargs['ymag'] = 'V'           
 
             # four panel plot of all hess diagrams:
-            a_cmd.pgcmd(**pgcmd_kwargs)
+#            a_cmd.pgcmd(**pgcmd_kwargs)
             for m in range(4):
                 # each of the 4 plotted separately:
                 pgcmd_kwargs['hess_i'] = m

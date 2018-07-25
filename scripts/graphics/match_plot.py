@@ -31,9 +31,9 @@ def mpl_hack(ax):
         ax.autoscale(False)
     return
 
-def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
+def match_plot(hesslist, extent, mag, color, labels=None, twobytwo=True, sig=True,
                xlabel=None, ylabel=None, cmap=None, logcounts=False,
-               photf_pts=None, mist_pts=None, best_list=None, ymag='I'):
+               photf_pts=None, mist_pts=None, best_list=None):
     '''
     Plot four hess diagrams with indivdual color bars using ImageGrid
     hesslist : list
@@ -75,10 +75,10 @@ def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
     grid = setup_imgrid(figsize=figsize, nrows=nrows, ncols=ncols)
 
     for i, (ax, hess) in enumerate(zip(grid, hesslist)):
-        ax = hessimg(ax=ax, hess=hess, extent=extent, labels=labels,
+        ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
                      best_list=best_list, cmap=cmap, logcounts=logcounts,
-                     ax_i=i, ymag=ymag)
+                     ax_i=i, mode='series')
 
     if xlabel is not None:
         ind = 0
@@ -91,10 +91,10 @@ def match_plot(hesslist, extent, labels=None, twobytwo=True, sig=True,
 
     return grid
 
-def hessimg(ax, hess, extent, labels=None, photf_pts=None,
+def hessimg(ax, hess, extent, mag, color, labels=None, photf_pts=None,
             mist_pts=None, best_list=None, cmap=None, ax_i=0,
             logcounts=False, xlabel=None, ylabel=None, 
-            mode='single', cbar=True, ymag='I', skewang=0.0):
+            mode='single', cbar=True, ymag='V', skewang=0.0):
 
     """
        Draws a hess diagrams to a given axis.
@@ -121,10 +121,18 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
     if logcounts:
         hess = np.log10(hess)
 
-    img = ax.imshow(hess, origin='upper', extent=extent,
-                    interpolation="nearest", cmap=colors)
+    #img = ax.imshow(hess, origin='upper', extent=extent,
+    #                interpolation="nearest", cmap=colors)
+
+    nmagbin = len(mag)
+    ncolbin = len(color)
+
+    h = ax.hist2d(color, mag, bins=(ncolbin, nmagbin), weights=hess,
+                          cmap=colors)
+
 
     # trying an affine transform to correct skew when ymag is I, not V.
+    """
     if ymag == 'I':
         # skew angle in degrees; need to actually determine this
         nmagbin = hess.shape[0]
@@ -140,13 +148,13 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
         #ax.scatter(max(xpos), max(ypos), s=500, c='r')
         #ax.scatter(min(xpos), max(ypos), s=500, c='r')
         #ax.scatter(max(xpos), min(ypos[hess[-1][:] == 0]), s=200, c='g')
-        ax.scatter(extent[1], extent[2], s=500, c='r')
-        ax.scatter(extent[0], extent[2], s=500, c='r')
-        ax.scatter(extent[1], extent[3], s=500, c='g')       
+#        ax.scatter(extent[1], extent[2], s=500, c='r')
+#        ax.scatter(extent[0], extent[2], s=500, c='r')
+#        ax.scatter(extent[1], extent[3], s=500, c='g')       
  
-        aside = np.abs(max(xpos) - min(xpos))
-        oside = np.abs(min(ypos[hess[:][-1] == 0]) - max(ypos))
-        hside = np.sqrt((min(ypos[hess[:][-1] == 0]) - max(ypos))**2 + (max(xpos) - min(xpos))**2)
+#        aside = np.abs(max(xpos) - min(xpos))
+#        oside = np.abs(min(ypos[hess[:][-1] == 0]) - max(ypos))
+#        hside = np.sqrt((min(ypos[hess[:][-1] == 0]) - max(ypos))**2 + (max(xpos) - min(xpos))**2)
 
         yangle = -skewang#0.0#-np.arccos(aside/hside)*180/np.pi
         xangle = 0.0
@@ -158,15 +166,18 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
 
         ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], 
                 "y--", transform=trans_data)       
+    """
 
     mpl_hack(ax)
     #ax.cax.colorbar(img)
 
     if mode == 'series' and cbar:
-        ax.cax.colorbar(img)
+        #ax.cax.colorbar(img)
+        ax.cax.colorbar(h[3])
     elif mode == 'single':
         if cbar:
-            plt.colorbar(img, ax=ax)
+            #plt.colorbar(img, ax=ax)
+            plt.colorbar(h[3], ax=ax)
         if ylabel is not None:
             ax.set_ylabel(ylabel)
         if xlabel is not None:
@@ -186,31 +197,31 @@ def hessimg(ax, hess, extent, labels=None, photf_pts=None,
 #            _ = add_inner_title(ax,
 #                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
 
-    if labels is not None:
-        _ = add_inner_title(ax, labels[i], loc=1)
-
-        # SSG: Also adding best age & logz (to model plot):
-        if (i == 1 | (i > 0 and mode == 'single')) & (best_list is not None):
-            #print(best_list)
-            assert best_list is not None, 'Need best_list for labels'
-            _ = add_inner_title(ax,  r"Age = {:.3e}".format(10**best_list[0]), loc=2)
-            _ = add_inner_title(ax,  r"LogZ = {:.2f}".format(best_list[1]), loc=3)
-
-    mpl.rc('text',usetex=True)
 #    if labels is not None:
 #        _ = add_inner_title(ax, labels[i], loc=1)
 
         # SSG: Also adding best age & logz (to model plot):
-#        if i == 1 and mist_pts is not None:
+#        if (i == 1 | (i > 0 and mode == 'single')) & (best_list is not None):
             #print(best_list)
 #            assert best_list is not None, 'Need best_list for labels'
-#            _ = add_inner_title(ax,
-#                                r"Age = {:.3e}".format(10 ** best_list[0]),
-#                                loc=2)
-#            _ = add_inner_title(ax,
-#                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+#            _ = add_inner_title(ax,  r"Age = {:.3e}".format(10**best_list[0]), loc=2)
+#            _ = add_inner_title(ax,  r"LogZ = {:.2f}".format(best_list[1]), loc=3)
 
-    mpl.rc('text', usetex=False)
+#    mpl.rc('text',usetex=True)
+    #if labels is not None:
+    #    _ = add_inner_title(ax, labels[i], loc=1)
+
+    # SSG: Also adding best age & logz (to model plot):
+#    if i == 1 and mist_pts is not None:
+        #print(best_list)
+#        assert best_list is not None, 'Need best_list for labels'
+#        _ = add_inner_title(ax,
+#                            "Age = {:.3e}".format(10 ** best_list[0]),
+#                            loc=2)
+#        _ = add_inner_title(ax,
+#                            "LogZ = {:.2f}".format(best_list[1]), loc=3)
+
+#    mpl.rc('text', usetex=False)
     ax.set_xlim(extent[0], extent[1])
     ax.set_ylim(extent[2], extent[3])
     ax = square_aspect(ax)

@@ -230,26 +230,26 @@ def read_match_cmd(filename, onlyheader=False, ymag='I'):
         print(cmd['Nobs'][idx])
 
         if ymag != 'V':
-            import matplotlib.transforms as mtransforms
+#            import matplotlib.transforms as mtransforms
             imag = cmd['mag'] - cmd['color']
             cmd['mag'] = imag
 
             #axa[1].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis')
-            axa[1].scatter(min(cmd['color']), max(cmd['mag']), c='r', s=400, alpha=0.6)
+#            axa[1].scatter(min(cmd['color']), max(cmd['mag']), c='r', s=400, alpha=0.6)
 
-            axa[1].scatter(max(cmd['color']), max(cmd['mag'][cmd['color'] == max(cmd['color'])]), c='r', s=400, alpha=0.6)
+#            axa[1].scatter(max(cmd['color']), max(cmd['mag'][cmd['color'] == max(cmd['color'])]), c='r', s=400, alpha=0.6)
 
-            y1 = max(cmd['mag'])
-            y2 = max(cmd['mag'][cmd['color'] == max(cmd['color'])])
-            x1 = min(cmd['color'])
-            x2 = max(cmd['color'])
-            hyp = np.sqrt((y2-y1)**2 + (x2-x1)**2)
-            adj = abs(x2-x1)
-            skewang= np.arccos(adj/hyp)*180/np.pi
+#            y1 = max(cmd['mag'])
+#            y2 = max(cmd['mag'][cmd['color'] == max(cmd['color'])])
+#            x1 = min(cmd['color'])
+#            x2 = max(cmd['color'])
+#            hyp = np.sqrt((y2-y1)**2 + (x2-x1)**2)
+#            adj = abs(x2-x1)
+#            skewang= np.arccos(adj/hyp)*180/np.pi
 
-            transform = mtransforms.Affine2D().skew_deg(0.0, skewang)
-            trans_data = transform + axa[1].transData
-            axa[1].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis', transform=trans_data)
+#            transform = mtransforms.Affine2D().skew_deg(0.0, skewang)
+#            trans_data = transform + axa[1].transData
+#            axa[1].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis', transform=trans_data)
 
             #print(np.where(cmd['mag']==max(cmd['mag'])))
             #print(np.where(cmd['color']==max(cmd['color'])))
@@ -257,10 +257,10 @@ def read_match_cmd(filename, onlyheader=False, ymag='I'):
             #idx = np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag'])))[0][0]
             #print(cmd['Nobs'][idx])
 
-            for ax in axa:
-                ax.invert_yaxis()
-                ax.set_aspect(np.abs((np.diff(ax.get_xlim()) / (np.diff(ax.get_ylim())))))
-            f.savefig('testhess.png', dpi=300)
+#            for ax in axa:
+#                ax.invert_yaxis()
+#                ax.set_aspect(np.abs((np.diff(ax.get_xlim()) / (np.diff(ax.get_ylim())))))
+#            f.savefig('testhess.png', dpi=300)
             #sys.exit()
             #print(cmd['mag'].shape)
 
@@ -274,8 +274,8 @@ def read_match_cmd(filename, onlyheader=False, ymag='I'):
     else:
         yfilter = header[-1]
         skewang = 0.0
-    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin, skewang
-
+#    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin, skewang
+    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin
 
 def add_gates(ngates):
     """TODO: figure out how to include gates progammatically."""
