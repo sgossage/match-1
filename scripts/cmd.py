@@ -168,7 +168,7 @@ class CMD(object):
         """
         self.cmd['diff'] = self.cmd['Nobs'] - self.cmd['Nsim']
         m2lnP, P, self.cmd['sig'] = stellar_prob(self.cmd['Nobs'], self.cmd['Nsim'])
-       
+        self.hesses = [self.cmd['Nobs'], self.cmd['Nsim'], self.cmd['diff'], self.cmd['sig']]
 
     def pgcmd(self, labels=None, outdir=None, logcounts=False, figname=None,
               twobytwo=True, sig=True, photf_pts=None, mist_pts=None,
@@ -195,7 +195,8 @@ class CMD(object):
 
         xlabel, ylabel = self.set_axis_labels()
 
-        grid = match_plot(hesses, self.extent, self.cmd['mag'], self.cmd['color'], labels=labels, ylabel=ylabel,
+        grid = match_plot(hesses, self.extent, self.cmd['mag'], self.cmd['color'], 
+                          (self.ncolbin, self.nmagbin), labels=labels, ylabel=ylabel,
                           xlabel=xlabel, twobytwo=twobytwo, sig=sig,
                           photf_pts=photf_pts, mist_pts=mist_pts,
                           best_list=best_list)

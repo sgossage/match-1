@@ -31,7 +31,7 @@ def mpl_hack(ax):
         ax.autoscale(False)
     return
 
-def match_plot(hesslist, extent, mag, color, labels=None, twobytwo=True, sig=True,
+def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, sig=True,
                xlabel=None, ylabel=None, cmap=None, logcounts=False,
                photf_pts=None, mist_pts=None, best_list=None):
     '''
@@ -75,7 +75,8 @@ def match_plot(hesslist, extent, mag, color, labels=None, twobytwo=True, sig=Tru
     grid = setup_imgrid(figsize=figsize, nrows=nrows, ncols=ncols)
 
     for i, (ax, hess) in enumerate(zip(grid, hesslist)):
-        ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, extent=extent, labels=labels,
+        ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, bins=bins, 
+                     extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
                      best_list=best_list, cmap=cmap, logcounts=logcounts,
                      ax_i=i, mode='series')
@@ -91,7 +92,7 @@ def match_plot(hesslist, extent, mag, color, labels=None, twobytwo=True, sig=Tru
 
     return grid
 
-def hessimg(ax, hess, extent, mag, color, labels=None, photf_pts=None,
+def hessimg(ax, hess, extent, mag, color, bins, labels=None, photf_pts=None,
             mist_pts=None, best_list=None, cmap=None, ax_i=0,
             logcounts=False, xlabel=None, ylabel=None, 
             mode='single', cbar=True, ymag='V', skewang=0.0):
@@ -124,10 +125,10 @@ def hessimg(ax, hess, extent, mag, color, labels=None, photf_pts=None,
     #img = ax.imshow(hess, origin='upper', extent=extent,
     #                interpolation="nearest", cmap=colors)
 
-    nmagbin = len(mag)
-    ncolbin = len(color)
+    #nmagbin = len(mag)
+    #ncolbin = len(color)
 
-    h = ax.hist2d(color, mag, bins=(ncolbin, nmagbin), weights=hess,
+    h = ax.hist2d(color, mag, bins=bins, weights=hess,
                           cmap=colors)
 
 
