@@ -31,21 +31,21 @@ def stellar_prob(obs, model, normalize=False):
         n /= np.sum(n)
         m /= np.sum(m)
 
-    d = 2. * (m + n * np.log(n / m) - n)
+    m2lnP = 2. * (m + n * np.log(n / m) - n)
 
     smalln = np.abs(n) < 1e-10
-    d[smalln] = 2. * m[smalln]
+    m2lnP[smalln] = 2. * m[smalln]
 
     smallm = (m < 0.001) & (n != 0)
-    d[smallm] = 2. * (0.001 + n[smallm] * np.log(n[smallm] / 0.001) - n[smallm])
+    m2lnP[smallm] = 2. * (0.001 + n[smallm] * np.log(n[smallm] / 0.001) - n[smallm])
 
-    sig = np.sqrt(d) * np.sign(n - m)
+    sig = np.sqrt(m2lnP) * np.sign(n - m)
     # fit = np.sum(sig)
     # pct_dif = (m - n) / n
     # sum(d) = -2 ln P
-    prob = np.exp(-1 * np.sum(d) / 2)
+    P = np.exp(-1 * np.sum(m2lnP) / 2)
     # prob = np.sum(d) / float(len(np.concatenate(n)) - 1)
-    return d, prob, sig
+    return m2lnP, P, sig
 
 
 def match_stats(sfh_file, match_cmd_file, nfp_nonsfr=5, nmc_runs=10000,

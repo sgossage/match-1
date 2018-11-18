@@ -5,7 +5,11 @@ import sys
 import os
 
 import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
+
+from scipy.optimize import curve_fit
 
 from .config import EXT
 from .fileio import read_binned_sfh
@@ -37,6 +41,10 @@ def match27filereader(filename, hmc_file=None):
                          names=names)
     return data.view(np.recarray)
 
+# SSG added Gaussian function for scipy.optimize curve fit to SFH
+def gauss(x, a, mu, sigma):
+
+    return a*np.exp(-0.5*((x - mu)/sigma)**2)
 
 class SFH(object):
     '''
@@ -210,7 +218,7 @@ class SFH(object):
                 else:
                     errors = False
             if 'mh' in val:
-                if ylabel is not None:
+                if ylabel is None:
                     ylabel = r'$\rm{[M/H]}$'
                 if convertz:
                     ylabel = r'$Z$'
@@ -222,12 +230,69 @@ class SFH(object):
                 rvals = rsfrs
                 val_merrs = rsfr_merrs
                 val_perrs = rsfr_perrs
-        if ax is None or xlabel is not None:
+        if ax is None:
             _, ax = plt.subplots()
+        if xlabel is None:
             xlabel = r'$\log Age\ \rm{(yr)}$'
 
         ax.plot(lages, vals, **plt_kw)
-        ax.set_xlim(6.5, 10.25)
+        solnfn = os.path.join('{:s}'.format(self.base), '{:s}.sfh.solns'.format(self.name))
+        sfhfn = os.path.join('{:s}'.format(self.base), '{:s}'.format((self.name).replace('.mcmc.zc', '.sfh')))
+
+        if not os.path.isfile(solnfn):
+            with open(sfhfn, 'r') as sfhf:
+                lines = sfhf.readlines()
+                params = lines[4].split(',')
+                for i, element in enumerate(params[::2]):
+                    element = float(element.split('=')[-1].split('+')[0])
+                    if i == 0:
+                        Av = element
+                    elif i == 1:
+                        dmod = element
+
+
+            with open(solnfn, 'w') as f:
+                f.write("Fit = {:f}\n".format(self.bestfit))
+                f.write("Av = {:f}\n".format(Av))
+                f.write("dmod = {:f}\n".format(dmod))
+
+        # do curve_fit to SFH
+        if 'mh' not in val:
+            popt, pcov = curve_fit(gauss, lages, vals, p0=[1, 9.1, 0.3])
+            ax.plot(lages, gauss(lages, *popt), c='r', alpha=0.6, label="A={:.2f}, log Age = {:.2f}, sigma = {:.2f}".format(*popt))
+            ax.legend(loc='best')
+            
+            with open(solnfn, 'r+') as f:
+                lines = f.readlines()
+                for line in lines:
+                    print(lines)
+                    if 'logAge = ' in line:
+                        writeage = False
+                        break
+                    else:
+                        writeage = True
+                if writeage:
+                    f.write("logAge = {:f}\n".format(popt[1]))
+                    #f.writelines(lines)
+
+        else:
+            ax.plot(lages, [np.mean(vals)]*len(lages), c='r', alpha=0.6, label="logZ={:.2f}".format(np.mean(vals)))
+            ax.legend(loc='best')
+
+            with open(solnfn, 'r+') as f:
+                lines =	f.readlines()
+                for line in lines:
+       	       	    if 'logZ = ' in line:
+                        writelZ = False
+                        break
+       	       	    else:
+       	       	       	writelZ = True
+       	       	if writelZ:
+                    f.write("logZ = {:f}\n".format(np.mean(vals)))
+                    #f.writelines(lines)
+
+        # ax.set_xlim(6.5, 10.25)
+        ax.set_xlim(min(self.data.lagei), max(self.data.lagef))
         if errors:
             ax.errorbar(rlages, rvals, yerr=[val_merrs, val_perrs], **eplt_kw)
 
@@ -454,6 +519,7 @@ def main(argv=None):
 
     for i, sfh_file in enumerate(args.sfh_files):
         msfh = SFH(sfh_file)
+
         if not args.oneplot:
             axs = None
             axp = None

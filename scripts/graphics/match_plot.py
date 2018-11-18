@@ -185,32 +185,32 @@ def hessimg(ax, hess, extent, mag, color, bins, labels=None, photf_pts=None,
             ax.set_xlabel(xlabel)
 
     #mpl.rc('text',usetex=True)
-#    if labels is not None:
-#        _ = add_inner_title(ax, labels[i], loc=1)
+ #   if labels is not None:
+ #       _ = add_inner_title(ax, labels[i], loc=1)
 
         # SSG: Also adding best age & logz (to model plot):
-#        if i == 1 and mist_pts is not None:
+ #       if i == 1 and mist_pts is not None:
             #print(best_list)
-#            assert best_list is not None, 'Need best_list for labels'
-#            _ = add_inner_title(ax,
-#                                r"Age = {:.3e}".format(10 ** best_list[0]),
-#                                loc=2)
-#            _ = add_inner_title(ax,
-#                                r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+ #           assert best_list is not None, 'Need best_list for labels'
+ #           _ = add_inner_title(ax,
+ #                               r"Age = {:.3e}".format(10 ** best_list[0]),
+ #                               loc=2)
+ #           _ = add_inner_title(ax,
+ #                               r"LogZ = {:.2f}".format(best_list[1]), loc=3)
 
-#    if labels is not None:
-#        _ = add_inner_title(ax, labels[i], loc=1)
+    if labels is not None:
+        _ = add_inner_title(ax, labels[i], loc=1)
 
         # SSG: Also adding best age & logz (to model plot):
-#        if (i == 1 | (i > 0 and mode == 'single')) & (best_list is not None):
+        if (i == 1 | (i > 0 and mode == 'single')) & (best_list is not None):
             #print(best_list)
-#            assert best_list is not None, 'Need best_list for labels'
-#            _ = add_inner_title(ax,  r"Age = {:.3e}".format(10**best_list[0]), loc=2)
-#            _ = add_inner_title(ax,  r"LogZ = {:.2f}".format(best_list[1]), loc=3)
+            assert best_list is not None, 'Need best_list for labels'
+            _ = add_inner_title(ax,  "Age = {:.3e}".format(10**best_list[0]), loc=2)
+            _ = add_inner_title(ax,  "LogZ = {:.2f}".format(best_list[1]), loc=3)
 
 #    mpl.rc('text',usetex=True)
-    #if labels is not None:
-    #    _ = add_inner_title(ax, labels[i], loc=1)
+#    if labels is not None:
+#        _ = add_inner_title(ax, labels[i], loc=1)
 
     # SSG: Also adding best age & logz (to model plot):
 #    if i == 1 and mist_pts is not None:

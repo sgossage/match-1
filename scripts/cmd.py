@@ -4,6 +4,8 @@ import argparse
 import os
 import sys
 
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -60,7 +62,7 @@ class CMD(object):
     files.
     """
 
-    def __init__(self, filename=None, onlyheader=False, params=None, ymag='I'):
+    def __init__(self, filename=None, onlyheader=False, params=None, ymag='V'):
         if filename is not None:
             self.base, self.name = os.path.split(os.path.abspath(filename))
             (self.cmd, self.fit, self.colors, self.yfilter,
@@ -79,22 +81,25 @@ class CMD(object):
 
     def set_labels(self):
         """Set up list of labels for pgpro"""
-        mpl.rc('text', usetex=True)
-        strfmt = r'${{\rm {:s}}}$'
+        #mpl.rc('text', usetex=True)
+        strfmt = '{:s}'#r'${{\rm {:s}}}$'
         labels = [strfmt.format(i) for i in ['data', 'model', 'd-m']]
         try:
             target, _ = parse_pipeline(self.name)
             labels[0] = strfmt.format(target)
         except:
             pass
-        labels.append(r'$-2\ln P = {:g}$'.format(self.fit))
-        mpl.rc('text', usetex=False)
+        #labels.append(r'$-2\ln P = {:g}$'.format(self.fit))
+        labels.append('-2 ln P = {:g}'.format(self.fit))
+        #mpl.rc('text', usetex=False)
         return labels
 
     def set_axis_labels(self, ax=None):
-        xlabel = r'$\rm{{{}}}$'.format(
+        #xlabel = r'$\rm{{{}}}$'.format(
+        xlabel = '{}'.format(
             self.colors.replace('WFC', 'F').replace('UVIS', 'F'))
-        ylabel = r'$\rm{{{}}}$'.format(
+        #ylabel = r'$\rm{{{}}}$'.format(
+        ylabel = '{}'.format(
             self.yfilter.replace('WFC', 'F').replace('UVIS', 'F'))
         if ax is not None:
             ax.set_xlabel(xlabel)
@@ -166,9 +171,28 @@ class CMD(object):
         """
             Recalculates the difference and signifigance (e.g. if CMD model values are changed).
         """
+
+        # re-calc the difference (data - model):
         self.cmd['diff'] = self.cmd['Nobs'] - self.cmd['Nsim']
+        # the significance (a bit heavy-handed):
         m2lnP, P, self.cmd['sig'] = stellar_prob(self.cmd['Nobs'], self.cmd['Nsim'])
+        # replace the hess list with new hesses:
         self.hesses = [self.cmd['Nobs'], self.cmd['Nsim'], self.cmd['diff'], self.cmd['sig']]
+        # replace fit (-2lnP) with newly calculated value:
+        self.fit = np.sum(m2lnP)
+
+    def resamp(self, hess_name):
+        """
+            Re-samples the hess diagram using a Poisson distribution. The argument 
+        hess_name should be either 'Nobs' or 'Nsim'.
+        """
+        
+        # re-sample:
+        new_hess = np.random.poisson(self.cmd[hess_name].flat).reshape(self.cmd[hess_name].shape)
+        # replace
+        self.cmd[hess_name] = new_hess
+        # re-calc hesses:
+        self.recalc()
 
     def pgcmd(self, labels=None, outdir=None, logcounts=False, figname=None,
               twobytwo=True, sig=True, photf_pts=None, mist_pts=None,

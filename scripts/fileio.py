@@ -209,7 +209,7 @@ def read_fake(filename):
     return data
 
 
-def read_match_cmd(filename, onlyheader=False, ymag='I'):
+def read_match_cmd(filename, onlyheader=False, ymag='V'):
     '''read MATCH .cmd file'''
     if not filename.endswith('.cmd'):
         print('Warning: {} might not be a .cmd file'.format(filename))
@@ -223,11 +223,11 @@ def read_match_cmd(filename, onlyheader=False, ymag='I'):
         axa[0].scatter(cmd['color'], cmd['mag'], c=cmd['Nobs'], s=4, alpha=0.6, cmap='viridis')
         axa[1].scatter(max(cmd['color']), max(cmd['mag']), c='r', s=400, alpha=0.6)
 
-        print(np.where(cmd['mag']==max(cmd['mag'])))
-        print(np.where(cmd['color']==max(cmd['color'])))
-        print(np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag']))))
+#        print(np.where(cmd['mag']==max(cmd['mag'])))
+#        print(np.where(cmd['color']==max(cmd['color'])))
+#        print(np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag']))))
         idx = np.where((cmd['color']==max(cmd['color'])) & (cmd['mag']==max(cmd['mag'])))[0][0]
-        print(cmd['Nobs'][idx])
+#        print(cmd['Nobs'][idx])
 
         if ymag != 'V':
 #            import matplotlib.transforms as mtransforms
@@ -273,7 +273,7 @@ def read_match_cmd(filename, onlyheader=False, ymag='I'):
         yfilter = header[2].split('-')[1]
     else:
         yfilter = header[-1]
-        skewang = 0.0
+#        skewang = 0.0
 #    return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin, skewang
     return cmd, fit, colors, yfilter, ncmd, nmagbin, ncolbin
 

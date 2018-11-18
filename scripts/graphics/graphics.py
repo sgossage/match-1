@@ -185,7 +185,7 @@ def add_inner_title(ax, title, loc, size=None):
     '''
     from matplotlib.patheffects import withStroke
     from matplotlib.offsetbox import AnchoredText
-    mpl.rc('text', usetex=True)
+#    mpl.rc('text', usetex=True)
 
     if size is None:
         size = dict(size=plt.rcParams['legend.fontsize'])
@@ -194,7 +194,7 @@ def add_inner_title(ax, title, loc, size=None):
     ax.add_artist(anct)
     anct.txt._text.set_path_effects([withStroke(foreground="w", linewidth=3)])
     anct.patch.set_alpha(0.5)
-    mpl.rc('text', usetex=False)
+#    mpl.rc('text', usetex=False)
     return anct
 
 
