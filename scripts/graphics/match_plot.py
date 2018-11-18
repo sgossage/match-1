@@ -75,8 +75,19 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
     grid = setup_imgrid(figsize=figsize, nrows=nrows, ncols=ncols)
 
     for i, (ax, hess) in enumerate(zip(grid, hesslist)):
+        if i < 2:
+            vmin = min(hesslist[0])
+            vmax = max(hesslist[0])
+        elif i == 2:
+            vmin = -max(hesslist[0])
+            vmax = max(hesslist[0])
+        else:
+            vmin = min(hesslist[i])
+            vmax = max(hesslist[i])
+
+    for i, (ax, hess) in enumerate(zip(grid, hesslist)):
         ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, bins=bins, 
-                     extent=extent, labels=labels,
+                     vmin=vmin, vmax=vmax, extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
                      best_list=best_list, cmap=cmap, logcounts=logcounts,
                      ax_i=i, mode='series')
@@ -92,9 +103,9 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
 
     return grid
 
-def hessimg(ax, hess, extent, mag, color, bins, labels=None, photf_pts=None,
-            mist_pts=None, best_list=None, cmap=None, ax_i=0,
-            logcounts=False, xlabel=None, ylabel=None, 
+def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None, 
+            photf_pts=None, mist_pts=None, best_list=None, cmap=None, 
+            ax_i=0, logcounts=False, xlabel=None, ylabel=None, 
             mode='single', cbar=True, ymag='V', skewang=0.0):
 
     """
@@ -129,7 +140,7 @@ def hessimg(ax, hess, extent, mag, color, bins, labels=None, photf_pts=None,
     #ncolbin = len(color)
 
     h = ax.hist2d(color, mag, bins=bins, weights=hess,
-                          cmap=colors)
+                          cmap=colors, vmin=vmin, vmax=vmax)
 
 
     # trying an affine transform to correct skew when ymag is I, not V.
