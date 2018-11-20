@@ -238,16 +238,16 @@ class CMD(object):
             ax.locator_params(axis='x', nbins=6)
 
         # save each hess diagram individually
-        f = plt.gcf()
-        for i, ax in enumerate(grid.axes_all):
+        #f = plt.gcf()
+        #for i, ax in enumerate(grid.axes_all):
     
             # Save just the portion _inside_ the axis' boundaries
-            axbounds = ax.get_window_extent().transformed(f.dpi_scale_trans.inverted())
+        #    axbounds = ax.get_window_extent().transformed(f.dpi_scale_trans.inverted())
 
             # preserve any preceding path in the save file name
-            svpath = os.path.join(*(figname.split('/')[:-1]), 'hess{:d}.png'.format(i))
+        #    svpath = os.path.join(*(figname.split('/')[:-1]), 'hess{:d}.png'.format(i))
             # Pad the saved area by 10% in the x-direction and 20% in the y-direction
-            f.savefig(svpath, bbox_inches=axbounds.expanded(1.1, 1.2))
+        #    f.savefig(svpath, bbox_inches=axbounds.expanded(1.1, 1.2))
 
         plt.savefig(figname)
         plt.close()

@@ -76,16 +76,15 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
 
     for i, (ax, hess) in enumerate(zip(grid, hesslist)):
         if i < 2:
-            vmin = min(hesslist[0])
-            vmax = max(hesslist[0])
+            vmin = np.min(hesslist[0])
+            vmax = np.max(hesslist[0])
         elif i == 2:
-            vmin = -max(hesslist[0])
-            vmax = max(hesslist[0])
+            vmin = -np.max(hesslist[0])
+            vmax = np.max(hesslist[0])
         else:
-            vmin = min(hesslist[i])
-            vmax = max(hesslist[i])
+            vmin = np.min(hesslist[i])
+            vmax = np.max(hesslist[i])
 
-    for i, (ax, hess) in enumerate(zip(grid, hesslist)):
         ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, bins=bins, 
                      vmin=vmin, vmax=vmax, extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
