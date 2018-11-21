@@ -75,15 +75,15 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
     grid = setup_imgrid(figsize=figsize, nrows=nrows, ncols=ncols)
 
     for i, (ax, hess) in enumerate(zip(grid, hesslist)):
-        if i < 2:
-            vmin = np.min(hesslist[0])
-            vmax = np.max(hesslist[0])
-        elif i == 2:
-            vmin = -np.max(hesslist[0])
-            vmax = np.max(hesslist[0])
-        else:
-            vmin = np.min(hesslist[i])
-            vmax = np.max(hesslist[i])
+        #if i < 2:
+        #    vmin = np.min(hesslist[0])
+        #    vmax = np.max(hesslist[0])
+        #elif i == 2:
+        #    vmin = -np.max(hesslist[0])
+        #    vmax = np.max(hesslist[0])
+        #else:
+        vmin = np.min(hesslist[i])
+        vmax = np.max(hesslist[i])
 
         ax = hessimg(ax=ax, hess=hess, mag=mag, color=color, bins=bins, 
                      vmin=vmin, vmax=vmax, extent=extent, labels=labels,
