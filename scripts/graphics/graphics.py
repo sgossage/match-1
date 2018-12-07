@@ -197,8 +197,9 @@ def add_inner_title(ax, title, loc, size=None):
 #    mpl.rc('text', usetex=False)
     return anct
 
-
-def zeroed_cmap(hess, cmap1=plt.cm.Greys_r, cmap2=plt.cm.Blues, dfrac=0.001,
+# plt.cm.Greys_r, plt.cm.Blues
+# copper_r, Greys_r
+def zeroed_cmap(hess, cmap1=plt.cm.Blues_r, cmap2=plt.cm.Oranges, dfrac=0.001,
                 transparent=False):
     """make a diverging color map with white set to 0.0"""
     fhess = hess[np.isfinite(hess)]

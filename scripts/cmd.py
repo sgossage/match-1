@@ -95,12 +95,12 @@ class CMD(object):
         return labels
 
     def set_axis_labels(self, ax=None):
-        #xlabel = r'$\rm{{{}}}$'.format(
-        xlabel = '{}'.format(
-            self.colors.replace('WFC', 'F').replace('UVIS', 'F'))
-        #ylabel = r'$\rm{{{}}}$'.format(
-        ylabel = '{}'.format(
-            self.yfilter.replace('WFC', 'F').replace('UVIS', 'F'))
+        xlabel = r'$\rm{{{}}}$'.format(
+        #xlabel = '{}'.format(
+            self.colors.replace('WFC', 'F').replace('UVIS', 'F').replace('Tycho_B', 'B_T').replace('Tycho_V', 'V_T'))
+        ylabel = r'$\rm{{{}}}$'.format(
+        #ylabel = '{}'.format(
+            self.yfilter.replace('WFC', 'F').replace('UVIS', 'F').replace('Tycho_B', 'B_T').replace('Tycho_V', 'V_T'))
         if ax is not None:
             ax.set_xlabel(xlabel)
             ax.set_ylabel(ylabel)
@@ -249,7 +249,7 @@ class CMD(object):
             # Pad the saved area by 10% in the x-direction and 20% in the y-direction
         #    f.savefig(svpath, bbox_inches=axbounds.expanded(1.1, 1.2))
 
-        plt.savefig(figname)
+        plt.savefig(figname, dpi=300)
         plt.close()
         print('wrote {}'.format(figname))
         return grid
