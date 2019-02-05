@@ -105,7 +105,7 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
 def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None, 
             photf_pts=None, mist_pts=None, best_list=None, cmap=None, 
             ax_i=0, logcounts=False, xlabel=None, ylabel=None, 
-            mode='single', cbar=True, ymag='V', skewang=0.0):
+            mode='single', cbar=True, ymag='V'):
 
     """
        Draws a hess diagrams to a given axis.
@@ -146,18 +146,18 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
                           cmap=colors, vmin=vmin, vmax=vmax, norm=mpl.colors.LogNorm())        
 
     # trying an affine transform to correct skew when ymag is I, not V.
-    """
-    if ymag == 'I':
+   
+#    if ymag == 'I':
         # skew angle in degrees; need to actually determine this
-        nmagbin = hess.shape[0]
-        ncolbin = hess.shape[1]
+#        nmagbin = hess.shape[0]
+#        ncolbin = hess.shape[1]
 
-        xpos = np.linspace(start = extent[0], stop = extent[1], num=ncolbin, endpoint=False)
-        for xp in xpos:
-            ax.axvline(x=xp)
-        ypos = np.linspace(start = extent[3], stop = extent[2], num=nmagbin, endpoint=False)
-        for yp in ypos:
-            ax.axhline(y=yp)
+#        xpos = np.linspace(start = extent[0], stop = extent[1], num=ncolbin, endpoint=False)
+#        for xp in xpos:
+#            ax.axvline(x=xp)
+#        ypos = np.linspace(start = extent[3], stop = extent[2], num=nmagbin, endpoint=False)
+#        for yp in ypos:
+#            ax.axhline(y=yp)
 
         #ax.scatter(max(xpos), max(ypos), s=500, c='r')
         #ax.scatter(min(xpos), max(ypos), s=500, c='r')
@@ -170,17 +170,16 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
 #        oside = np.abs(min(ypos[hess[:][-1] == 0]) - max(ypos))
 #        hside = np.sqrt((min(ypos[hess[:][-1] == 0]) - max(ypos))**2 + (max(xpos) - min(xpos))**2)
 
-        yangle = -skewang#0.0#-np.arccos(aside/hside)*180/np.pi
-        xangle = 0.0
+#        yangle = -skewang#0.0#-np.arccos(aside/hside)*180/np.pi
+#        xangle = 0.0
 
-        transform = mtransforms.Affine2D().skew_deg(xangle, yangle)
-        trans_data = transform + ax.transData
-        img.set_transform(trans_data)
-        x1, x2, y1, y2 = img.get_extent()
+#        transform = mtransforms.Affine2D().skew_deg(xangle, yangle)
+#        trans_data = transform + ax.transData
+#        img.set_transform(trans_data)
+#        x1, x2, y1, y2 = img.get_extent()
 
-        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], 
-                "y--", transform=trans_data)       
-    """
+#        ax.plot([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1], 
+#                "y--", transform=trans_data)       
 
     mpl_hack(ax)
     #ax.cax.colorbar(img)

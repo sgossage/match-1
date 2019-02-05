@@ -249,13 +249,14 @@ class CMD(object):
             # Pad the saved area by 10% in the x-direction and 20% in the y-direction
         #    f.savefig(svpath, bbox_inches=axbounds.expanded(1.1, 1.2))
 
-        plt.savefig(figname, dpi=300)
+        plt.savefig(figname)
         plt.close()
         print('wrote {}'.format(figname))
         return grid
 
-    def plthess(self, labels=None, outdir=None, logcounts=False, figname=None, cmap=None,
-               sig=True, photf_pts=None, mist_pts=None, best_list=None, hess_i=0, ymag='V'):
+    def plthess(self, ax=None,labels=None, outdir=None, logcounts=False, figname=None, cmap=None,
+               sig=True, photf_pts=None, mist_pts=None, best_list=None, hess_i=0, ymag='V', save=True,
+               vmin=None, vmax=None):
         '''produce the image that pgcmd.pro makes
         enhances graphics.match_plot.match_plot:
             automatic titles for each panel
@@ -279,11 +280,24 @@ class CMD(object):
 
         xlabel, ylabel = self.set_axis_labels()
 
-        fig = plt.figure(figsize=(16,9))
-        ax = fig.add_subplot(111)
-        ax = hessimg(ax = ax, hess = hess, extent=self.extent, labels = labels, photf_pts = photf_pts,
-                           mist_pts = mist_pts, best_list = best_list, cmap = cmap, logcounts = logcounts, 
-                           ax_i = hess_i, mode = 'single', ylabel = ylabel, xlabel = xlabel)
+        if ax is None:
+            fig = plt.figure(figsize=(16,9))
+            ax = fig.add_subplot(111)
+
+        if vmin == None:
+            vmin = np.min(hess)
+        if vmax == None:
+            vmax = np.max(hess)
+
+        #ax = hessimg(ax = ax, hess = hess, extent=self.extent, labels = labels, photf_pts = photf_pts,
+        #                   mist_pts = mist_pts, best_list = best_list, cmap = cmap, logcounts = logcounts, 
+        #                   ax_i = hess_i, mode = 'single', ylabel = ylabel, xlabel = xlabel)
+        ax = hessimg(ax=ax, hess=hess, mag=self.cmd['mag'], color=self.cmd['color'], 
+                     bins=(self.ncolbin, self.nmagbin), 
+                     vmin=vmin, vmax=vmax, extent=self.extent, labels=None,
+                     photf_pts=photf_pts, mist_pts=mist_pts, xlabel=xlabel, ylabel=ylabel,
+                     best_list=best_list, cmap=cmap, logcounts=logcounts,
+                     ax_i=hess_i, mode='single', cbar=False)
 
         gates = self.cmd['gate']
         ugates = np.unique(gates)
@@ -297,33 +311,12 @@ class CMD(object):
         #for ax in grid.axes_all:
         ax.locator_params(axis='x', nbins=6)
 
-        plt.savefig(figname)
-        plt.close()
-        print('wrote {}'.format(figname))
+        if save:
+            plt.savefig(figname)
+            plt.close()
+            print('wrote {}'.format(figname))
+
         return
-
-    def testplt(self, ax):
-  
-        import matplotlib.transforms as mtransforms
-
-        #imag = self.cmd['mag'] - self.cmd['color']
-        #self.cmd['mag'] = imag
-
-        y1 = max(self.cmd['mag'])
-        y2 = max(self.cmd['mag'][self.cmd['color'] == max(self.cmd['color'])])
-        x1 = min(self.cmd['color'])
-        x2 = max(self.cmd['color'])
-        hyp = np.sqrt((y2-y1)**2 + (x2-x1)**2)
-        adj = abs(x2-x1)
-        skewang= np.arccos(adj/hyp)*180/np.pi
-
-        transform = mtransforms.Affine2D().skew_deg(0.0, skewang)
-        trans_data = transform + ax.transData
-        #ax.scatter(self.cmd['color'], self.cmd['mag'], c=self.cmd['Nsim'], s=10, lw=0, alpha=0.6, cmap='Reds', transform=trans_data)
-        #ax.scatter(self.cmd['color'], self.cmd['mag'], c=self.cmd['Nsim'], s=10, lw=0, alpha=1.0, cmap='Reds')
-        ax.hist2d(self.cmd['color'], self.cmd['mag'], bins=(self.ncolbin, self.nmagbin), weights=self.cmd['Nsim'])
-        return
-
 
 def sortbyfit(cmdfns, onlyheader=False):
     """
