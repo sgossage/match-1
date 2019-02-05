@@ -138,9 +138,12 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
     #nmagbin = len(mag)
     #ncolbin = len(color)
 
-    h = ax.hist2d(color, mag, bins=bins, weights=hess,
+    if i > 1:
+        h = ax.hist2d(color, mag, bins=bins, weights=hess,
                           cmap=colors, vmin=vmin, vmax=vmax)
-
+    elif i <= 1:
+        h = ax.hist2d(color, mag, bins=bins, weights=hess,
+                          cmap=colors, vmin=vmin, vmax=vmax, norm=mpl.colors.LogNorm())        
 
     # trying an affine transform to correct skew when ymag is I, not V.
     """
