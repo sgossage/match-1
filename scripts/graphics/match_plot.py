@@ -138,6 +138,10 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
     #nmagbin = len(mag)
     #ncolbin = len(color)
 
+    print("i = ", i)
+    print("vmin = ", vmin)
+    print("vmax = ", vmax)
+
     if i > 1:
         h = ax.hist2d(color, mag, bins=bins, weights=hess,
                           cmap=colors, vmin=vmin, vmax=vmax)
