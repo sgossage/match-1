@@ -206,6 +206,13 @@ class CMD(object):
         '''
         labels = labels or self.set_labels()
 
+        if "/" in figname:
+            savedir = "/".join(figname.split("/")[0:-1])
+        else:
+            print("No leading path in savedir.")
+            savedir = ""
+        print(savedir)
+        
         if figname is None:
             base = outdir or self.base
             assert os.path.isdir(base), \
@@ -223,7 +230,7 @@ class CMD(object):
                           (self.ncolbin, self.nmagbin), labels=labels, ylabel=ylabel,
                           xlabel=xlabel, twobytwo=twobytwo, sig=sig,
                           photf_pts=photf_pts, mist_pts=mist_pts,
-                          best_list=best_list)
+                          best_list=best_list, savedir=savedir)
 
         gates = self.cmd['gate']
         ugates = np.unique(gates)

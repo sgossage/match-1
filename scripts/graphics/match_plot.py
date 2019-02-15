@@ -6,6 +6,7 @@ from .graphics import square_aspect, zeroed_cmap, add_inner_title
 import matplotlib.transforms as mtransforms
 
 import matplotlib as mpl
+import os
 
 def setup_imgrid(figsize=[12, 3], nrows=1, ncols=4):
     """Default settings to initialize match_plot"""
@@ -33,7 +34,7 @@ def mpl_hack(ax):
 
 def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, sig=True,
                xlabel=None, ylabel=None, cmap=None, logcounts=False,
-               photf_pts=None, mist_pts=None, best_list=None):
+               photf_pts=None, mist_pts=None, best_list=None, savedir=""):
     '''
     Plot four hess diagrams with indivdual color bars using ImageGrid
     hesslist : list
@@ -89,7 +90,7 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
                      vmin=vmin, vmax=vmax, extent=extent, labels=labels,
                      photf_pts=photf_pts, mist_pts=mist_pts,
                      best_list=best_list, cmap=cmap, logcounts=logcounts,
-                     ax_i=i, mode='series')
+                     ax_i=i, mode='series', savedir=savedir)
 
     if xlabel is not None:
         ind = 0
@@ -105,7 +106,7 @@ def match_plot(hesslist, extent, mag, color, bins, labels=None, twobytwo=True, s
 def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None, 
             photf_pts=None, mist_pts=None, best_list=None, cmap=None, 
             ax_i=0, logcounts=False, xlabel=None, ylabel=None, 
-            mode='single', cbar=True, ymag='V'):
+            mode='single', cbar=True, ymag='V', savedir=""):
 
     """
        Draws a hess diagrams to a given axis.
@@ -132,6 +133,18 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
     if logcounts:
         hess = np.log10(hess)
 
+    
+    txtout_name = os.path.join(savedir, 
+                               'hess{:d}_{:s}_bins{:d}_{:d}.txt'.format(i, 
+                                                                 labels[i].replace("-2 ln P = ", "m2lnP"),
+                                                                 bins[0],
+                                                                 bins[1]))
+    print("Saving ", txtout_name)
+    np.savetxt(txtout_name,
+                X=np.c_[color, mag, hess], delimiter='\t',fmt="%s")
+    print("bins: ", bins)
+    print(labels[i])
+
     #img = ax.imshow(hess, origin='upper', extent=extent,
     #                interpolation="nearest", cmap=colors)
 
@@ -146,8 +159,11 @@ def hessimg(ax, hess, extent, mag, color, bins, vmin, vmax, labels=None,
         h = ax.hist2d(color, mag, bins=bins, weights=hess,
                           cmap=colors, vmin=vmin, vmax=vmax)
     elif i <= 1:
+        #if vmin == 0.0:
+        #    vmin = 1e-6
         h = ax.hist2d(color, mag, bins=bins, weights=hess,
-                          cmap=colors, vmin=vmin, vmax=vmax, norm=mpl.colors.LogNorm())        
+                          cmap=colors, norm=mpl.colors.LogNorm())
+
 
     # trying an affine transform to correct skew when ymag is I, not V.
    
